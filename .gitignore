@@ -3,3 +3,9 @@
 /KnobSelection/__pycache__/
 /TuningAlgorithm/__pycache__/
 /__pycache__/
+/DBConnector/model/
+/FeatureSelection/model/
+/KnobSelection/model/
+/TuningAlgorithm/model/
+/log/
+/data/

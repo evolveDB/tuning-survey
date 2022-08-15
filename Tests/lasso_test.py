@@ -9,8 +9,8 @@ import os
 if __name__=='__main__':
     WORKLOAD="../Workload/TestWorkload/workload.bin"
     TRAIN_DATA_SIZE=50
-    DATA_PATH="../data/lasso_train_data.pkl"
-    MODEL_SAVE_PATH="../KnobSelection/model/lasso_model.pkl"
+    DATA_PATH="../data/lasso_train_data2.pkl"
+    MODEL_SAVE_PATH="../KnobSelection/model/lasso_model2.pkl"
     f=open(WORKLOAD,'rb')
     workload=pickle.load(f)
     f.close()
@@ -29,17 +29,24 @@ if __name__=='__main__':
         knob_type=[]
         for key in knob_info:
             knob_names.append(key)
-            knob_min.append(knob_info[key]['min'])
-            knob_max.append(knob_info[key]['max'])
-            knob_granularity.append(knob_info[key]['granularity'])
-            if 'type' in knob_config[key]:
-                knob_type.append(knob_info[key]['type'])
+            if "min" in knob_config[key]:
+                knob_min.append(knob_config[key]["min"])
             else:
-                knob_type.append(None)
+                knob_min.append(knob_info[key]['min'])
+            if "max" in knob_config[key]:
+                knob_max.append(knob_config[key]["max"])
+            else:
+                knob_max.append(knob_info[key]['max'])
+            if "granularity" in knob_config[key]:
+                knob_granularity.append(knob_config[key]["granularity"])
+            else:
+                knob_granularity.append(knob_info[key]['granularity'])
+            knob_type.append(knob_info[key]['type'])
         knob_min=np.array(knob_min)
         knob_max=np.array(knob_max)
-        knob_max[14]=7680
         knob_granularity=np.array(knob_granularity)
+
+
         
         for i in range(TRAIN_DATA_SIZE):
             action=np.random.random(size=len(knob_info))
@@ -76,3 +83,10 @@ if __name__=='__main__':
     pickle.dump(model,f)
     f.close()
     print(model.get_top_rank())
+
+#['commit_siblings', 'effective_cache_size', 'vacuum_multixact_freeze_min_age', 
+# 'vacuum_cost_limit', 'max_stack_depth', 'vacuum_freeze_table_age', 'join_collapse_limit', 'maintenance_work_mem', 
+# 'geqo_selection_bias', 'work_mem', 'vacuum_cost_delay', 'geqo_threshold', 'deadlock_timeout', 'vacuum_cost_page_miss', 
+# 'geqo_pool_size', 'vacuum_freeze_min_age', 'geqo_generations', 'vacuum_multixact_freeze_table_age', 'statement_timeout', 
+# 'geqo_effort', 'vacuum_cost_page_dirty', 'from_collapse_limit', 'effective_io_concurrency', 'vacuum_cost_page_hit', 'default_statistics_target', 
+# 'temp_file_limit', 'commit_delay', 'temp_buffers']

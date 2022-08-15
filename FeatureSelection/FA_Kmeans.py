@@ -54,7 +54,8 @@ class FeatureSelector_FA_Kmeans(FeatureSelector):
         if self.label2metric is None:
             return Xnew
         output=[]
-        for cluster in self.label2metric:
+        for cluster_id in self.label2metric:
+            cluster=self.label2metric[cluster_id]
             if len(cluster)>0:
                 output.append(Xnew[cluster[0]])
         return np.array(output)

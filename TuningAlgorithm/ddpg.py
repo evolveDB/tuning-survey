@@ -1,4 +1,5 @@
 import os
+import sys
 import torch
 import torch.nn as nn
 from torch.optim import Adam
@@ -87,7 +88,6 @@ class ActorCritic:
 
     def remember(self, cur_state, action, reward, new_state):
         self.memory.append([cur_state, action, reward, new_state])
-        # print("Mem: Q-%f"%reward)
 
     def sampling(self,batch_size):
         indices=np.random.choice(len(self.memory)-1,size=batch_size-1).tolist()
@@ -217,22 +217,39 @@ class ActorCritic:
         return reward
 
 class DDPG_Algorithm():
-    def __init__(self,db_connector:Executor,feature_selector:FeatureSelector,workload:list,selected_knob_config=knob_config,latency_weight=9,throughput_weight=1) -> None:
+    def __init__(self,db_connector:Executor,feature_selector:FeatureSelector,workload:list,selected_knob_config=knob_config,latency_weight=9,throughput_weight=1,logger=None) -> None:
         self.db=db_connector
         self.workload=workload
         self.feature_selector=feature_selector
         self.latency_weight=latency_weight
         self.throughput_weight=throughput_weight
+        if logger is not None:
+            self.logger=logger
+        else:
+            self.logger=sys.stdout
 
+        knobs=selected_knob_config.keys()
+        knob_info=self.db.get_knob_min_max(knobs)
         self.knob_names=[]
         self.knob_min=[]
         self.knob_max=[]
         self.knob_granularity=[]
-        for key in selected_knob_config:
+        self.knob_type=[]
+        for key in knob_info:
             self.knob_names.append(key)
-            self.knob_min.append(selected_knob_config[key]['min'])
-            self.knob_max.append(selected_knob_config[key]['max'])
-            self.knob_granularity.append(selected_knob_config[key]['granularity'])
+            if "min" in selected_knob_config[key]:
+                self.knob_min.append(selected_knob_config[key]["min"])
+            else:
+                self.knob_min.append(knob_info[key]['min'])
+            if "max" in selected_knob_config[key]:
+                self.knob_max.append(selected_knob_config[key]["max"])
+            else:
+                self.knob_max.append(knob_info[key]['max'])
+            if "granularity" in selected_knob_config[key]:
+                self.knob_granularity.append(selected_knob_config[key]["granularity"])
+            else:
+                self.knob_granularity.append(knob_info[key]['granularity'])
+            self.knob_type.append(knob_info[key]['type'])
         self.knob_min=np.array(self.knob_min)
         self.knob_max=np.array(self.knob_max)
         self.knob_granularity=np.array(self.knob_granularity)
@@ -258,23 +275,27 @@ class DDPG_Algorithm():
     
     def take_action(self,action):
         knob_value=np.round((self.knob_max-self.knob_min)/self.knob_granularity*action)*self.knob_granularity+self.knob_min
-        self.db.change_knob(self.knob_names,knob_value)
+        self.logger.write("Knob value: "+str(knob_value)+"\n")
+        self.db.change_knob(self.knob_names,knob_value,self.knob_type)
 
     def train(self,total_epoch,epoch_steps,save_epoch_interval,save_folder):
         for epoch in range(total_epoch): 
-            self.db.reset_knob()
+            self.db.reset_knob(self.knob_names)
             self.init_latency,self.init_throughput,current_state=self.run_workload()
             self.last_latency=self.init_latency
-            self.last_throughput=self.init_throughput()
+            self.last_throughput=self.init_throughput
 
             for step in range(epoch_steps):
+                self.logger.write("Current state: "+str(current_state)+"\n")
                 action=self.model.act(current_state)
                 self.take_action(action)
                 latency,throughput,new_state=self.run_workload()
+                self.logger.write("Latency: "+str(round(latency,4))+"\nThroughput: "+str(round(throughput,4))+"\n")
                 reward=self.calculate_reward(latency,throughput)
                 self.model.remember(current_state,action,reward,new_state)
                 self.model.train()
                 current_state=new_state
+                self.logger.write("\n")
             
             if (epoch+1)%save_epoch_interval==0:
                 torch.save(self.model.actor_model.state_dict(),os.path.join(save_folder,"actor_epoch_{}.pkl".format(epoch)))

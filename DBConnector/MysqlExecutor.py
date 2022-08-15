@@ -17,13 +17,16 @@ class MysqlExecutor(Executor):
         self.success_query=0
         self.lock=threading.Lock()
 
-    def change_knob(self, knob_name, knob_value):
+    def change_knob(self, knob_name, knob_value,knob_type:None):
         if len(knob_name)!=len(knob_value):
             raise Exception("len(knob_name) should be equal to len(knob_value)")
         conn=pymysql.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
         cur=conn.cursor()
         for i in range(len(knob_name)):
-            sql="set global "+str(knob_name[i])+"="+str(knob_value[i])+";"
+            if knob_type is not None and knob_type[i]=='float':
+                sql="set global "+str(knob_name[i])+"="+str(knob_value[i])+";"
+            else:
+                sql="set global "+str(knob_name[i])+"="+str(int(knob_value[i]))+";"
             cur.execute(sql)
         cur.close()
         conn.close()
@@ -76,7 +79,7 @@ class MysqlExecutor(Executor):
         run_time = round(time.time() - start, 1)
         avg_lat = self.total_latency / self.success_query
         avg_qps = self.success_query / (run_time+1e-5)
-        print("Latency: "+str(round(avg_lat,4))+"\nThroughput: "+str(round(avg_qps,4)))
+        # print("Latency: "+str(round(avg_lat,4))+"\nThroughput: "+str(round(avg_qps,4)))
         return avg_lat,avg_qps
  
     def execute_query_with_pool(self,sql):
@@ -130,3 +133,22 @@ class MysqlExecutor(Executor):
         cur.close()
         conn.close()
         return int(result[0][1])
+    
+    def get_knob_min_max(self,knob_names)->dict:
+        result={}
+        knob_tuple=str(tuple(knob_names))
+        conn=pymysql.connect(host=self.ip,user=self.user,password=self.password,database="performance_schema",port=self.port)
+        cur=conn.cursor()
+        sql="select VARIABLE_NAME, MIN_VALUE, MAX_VALUE from variables_info where VARIABLE_NAME in "+knob_tuple
+        cur.execute(sql)
+        sql_result=cur.fetchall()
+        for row in sql_result:
+            dic={}
+            dic["min"]=int(row[1])
+            dic["max"]=int(row[2])
+            dic["granularity"]=1
+            dic["type"]="integer"
+            result[row[0]]=dic
+        cur.close()
+        conn.close()
+        return result

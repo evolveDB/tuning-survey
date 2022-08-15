@@ -24,7 +24,7 @@ class PostgresExecutor(Executor):
         conn=psycopg2.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
         cur=conn.cursor()
         for i in range(len(knob_name)):
-            if knob_type[i] is None:
+            if knob_type[i]=="integer":
                 sql="alter database "+str(self.database)+" set "+str(knob_name[i])+"="+str(int(knob_value[i]))
             else:
                 sql="alter database "+str(self.database)+" set "+str(knob_name[i])+"="+str(knob_value[i])
@@ -77,7 +77,6 @@ class PostgresExecutor(Executor):
         run_time = round(time.time() - start, 1)
         avg_lat = self.total_latency / self.success_query
         avg_qps = self.success_query / (run_time+1e-5)
-        print("Latency: "+str(round(avg_lat,4))+"\nThroughput: "+str(round(avg_qps,4)))
         return avg_lat,avg_qps
 
     

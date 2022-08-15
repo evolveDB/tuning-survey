@@ -35,7 +35,7 @@ class Executor(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def change_knob(self,knob_name:list,knob_value:list):
+    def change_knob(self,knob_name:list,knob_value:list,knob_type:list):
         pass
 
     @abc.abstractmethod

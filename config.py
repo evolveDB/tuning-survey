@@ -7,6 +7,15 @@ class DictParser(configparser.ConfigParser):
             d[k] = dict(d[k])
         return d
 
+class Logger():
+    def __init__(self,path) -> None:
+        self.path=path
+    
+    def write(self,string:str):
+        f=open(self.path,'a')
+        f.write(string)
+        f.close()
+
 db_config=None
 knob_config=None
 cfp=DictParser()
