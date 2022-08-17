@@ -1,11 +1,6 @@
-<p align="center">
-    <b>
-    <font size ='8'>tuning-survey
-        </font>
-    </b>
-</p>
+# tuning-survey
 
-<p align="center">
+<p>
     <a href="#Overview">Overview</a>
     <a href="#Installation">Installation</a>
     <a href="#Datasets">Dataset</a>
