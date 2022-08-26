@@ -5,6 +5,7 @@ from dbutils.pooled_db import PooledDB
 from .BaseExecutor import *
 import queue
 import time
+import paramiko
 
 class PostgresExecutor(Executor):
     def __init__(self,ip,port,user,password,database):
@@ -30,6 +31,7 @@ class PostgresExecutor(Executor):
                 sql="alter database "+str(self.database)+" set "+str(knob_name[i])+"="+str(knob_value[i])
             cur.execute(sql)
         cur.close()
+        conn.commit()
         conn.close()
     
     def reset_knob(self, knob_name: list):
@@ -39,6 +41,7 @@ class PostgresExecutor(Executor):
             sql="alter database "+str(self.database)+" reset "+str(knob)
             cur.execute(sql)
         cur.close()
+        conn.commit()
         conn.close()
 
     def run_job(self, thread_num, workload: list):
@@ -75,7 +78,7 @@ class PostgresExecutor(Executor):
         main_queue.join()
         self.pool.close()
         run_time = round(time.time() - start, 1)
-        avg_lat = self.total_latency / self.success_query
+        avg_lat = self.total_latency / (self.success_query+1e-5)
         avg_qps = self.success_query / (run_time+1e-5)
         return avg_lat,avg_qps
 
@@ -93,21 +96,29 @@ class PostgresExecutor(Executor):
             if conn is not None:
                 conn.close()
             print("Postgres execute: " + str(error))
+            error_msg=str(error)
+            if "invalid" in error_msg:
+                print(sql)
+                exit()
             return False
 
     def consumer_process(self,task_key):
         query = task_key.split('~#~')[1]
         if query:
-            start = time.time()
-            result=self.execute_query_with_pool(query)
-            end = time.time()
-            interval = end - start
+            success=False
+            while not success:
+                start = time.time()
+                result=self.execute_query_with_pool(query)
+                end = time.time()
+                interval = end - start
 
-            if result:
+                success=result
                 self.lock.acquire()
-                self.success_query+=1
+                if result:
+                    self.success_query+=1
                 self.total_latency+=interval
                 self.lock.release()
+                break
 
     def get_db_state(self):
         conn=psycopg2.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
@@ -124,14 +135,20 @@ class PostgresExecutor(Executor):
         return state_list
 
     def get_max_thread_num(self):
-        conn=psycopg2.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
-        cur=conn.cursor()
-        sql="show max_connections;"
-        cur.execute(sql)
-        result=cur.fetchall()
-        cur.close()
-        conn.close()
-        return int(result[0][0])
+        try:
+            conn=psycopg2.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
+            cur=conn.cursor()
+            sql="show max_connections;"
+            cur.execute(sql)
+            result=cur.fetchall()
+            cur.close()
+            conn.close()
+            return int(result[0][0])-1
+        except Exception as error:
+            if conn is not None:
+                conn.close()
+            print("Postgres execute: " + str(error))
+            return self.get_max_thread_num()
 
     def get_knob_min_max(self, knob_names:list)->dict:
         result={}
@@ -157,4 +174,14 @@ class PostgresExecutor(Executor):
         cur.close()
         conn.close()
         return result
-        
+    
+    def restart_db(self,remote_port,remote_user,remote_password):
+        ssh=paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname=self.ip,port=int(remote_port),username=remote_user,password=remote_password)
+        stdin,stdout,stderr=ssh.exec_command("sudo -S service postgresql restart")
+        time.sleep(0.1)
+        stdin.write(remote_password+"\n")
+        stdin.flush()
+        ssh.close()
+        time.sleep(2)

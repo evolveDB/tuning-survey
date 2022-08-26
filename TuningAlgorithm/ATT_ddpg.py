@@ -10,9 +10,45 @@ from config import *
 from DBConnector.BaseExecutor import *
 from FeatureSelection.FeatureSelector import *
 
-class Actor(nn.Module):
-    def __init__(self,observation_dim,action_dim) -> None:
+class AttentionState(nn.Module):
+    def __init__(self,workload_dim,state_dim,hidden_state_dim) -> None:
         super().__init__()
+        self.state_dim=state_dim
+        self.mlp_model_list=[nn.Sequential(nn.Linear(workload_dim+1,hidden_state_dim),nn.Tanh(),nn.Linear(hidden_state_dim,1),nn.Sigmoid()) for i in range(state_dim)]
+        self.softmax=nn.Softmax()
+
+    def forward(self,workload_character:list,state:list):
+        # workload_character & state: 1-D array, one sample each time
+        # data=[] 
+        # for i in range(self.state_dim):
+        #     data.append(np.append(workload_character,state[i]))
+        # data=np.array(data)
+        # data=torch.FloatTensor(data)
+        # print(data)
+        # alpha=[self.mlp_model_list[i](data[i]) for i in range(self.state_dim)]
+        # print(alpha)
+        # alpha=self.softmax(torch.Tensor(alpha))
+        # print(alpha)
+        # return alpha.mul(torch.Tensor(state))
+
+        # workload_character & state: 2-D array: (num_samples, character dimension)
+        data=[] #(state_dim,sample_num,workload_dim+1)
+        for i in range(self.state_dim):
+            sample_data=[]
+            for j in range(len(workload_character)):
+                sample_data.append(np.append(workload_character[j],state[j][i]))
+            data.append(sample_data)
+        data=np.array(data)
+        data=torch.FloatTensor(data)
+        alpha=[self.mlp_model_list[i](data[i]) for i in range(self.state_dim)]
+        alpha=torch.cat(alpha,dim=0).reshape(len(workload_character),self.state_dim)
+        alpha=self.softmax(alpha)
+        return alpha.mul(torch.Tensor(state))
+        
+class Actor(nn.Module):
+    def __init__(self,observation_dim,action_dim,workload_dim) -> None:
+        super().__init__()
+        self.attention_model=AttentionState(workload_dim,observation_dim,32)
         self.fc1=nn.Linear(observation_dim,128)
         self.bn1=nn.BatchNorm1d(128)
         self.fc2=nn.Linear(128,64)
@@ -20,7 +56,8 @@ class Actor(nn.Module):
         self.fc3=nn.Linear(64,action_dim)
 
 
-    def forward(self,observation):
+    def forward(self,observation,workload_character):
+        observation=self.attention_model(workload_character,observation)
         a=torch.relu(self.fc1(observation))
         a=self.bn1(a)
         a=torch.tanh(self.fc2(a))
@@ -53,7 +90,7 @@ class Critic(nn.Module):
         return self.output(a)
 
 class ActorCritic:
-    def __init__(self, state_num,action_num, learning_rate=0.001, train_min_size=5, size_mem=2000, size_predict_mem=2000):
+    def __init__(self,state_num,action_num,workload_dim,learning_rate=0.001, train_min_size=5, size_mem=2000, size_predict_mem=2000):
 
         self.learning_rate = learning_rate  # 0.001
         self.train_min_size = train_min_size
@@ -66,8 +103,8 @@ class ActorCritic:
         self.memory = deque(maxlen=size_mem)
         self.mem_predicted = deque(maxlen=size_predict_mem)
 
-        self.actor_model=Actor(state_num,action_num)
-        self.target_actor_model=Actor(state_num,action_num)
+        self.actor_model=Actor(state_num,action_num,workload_dim)
+        self.target_actor_model=Actor(state_num,action_num,workload_dim)
         self.actor_optimizer=Adam(self.actor_model.parameters(),lr=learning_rate)
 
         self.critic_model=Critic(state_num,action_num)
@@ -82,12 +119,8 @@ class ActorCritic:
         #     self.critic_model.cuda()
         #     self.target_critic_model.cuda()
 
-    # ========================================================================= #
-    #                               Model Training                              #
-    # ========================================================================= #
-
-    def remember(self, cur_state, action, reward, new_state):
-        self.memory.append([cur_state, action, reward, new_state])
+    def remember(self,cur_state, action, reward, new_state,workload_character):
+        self.memory.append([cur_state, action, reward, new_state,workload_character])
 
     def sampling(self,batch_size):
         indices=np.random.choice(len(self.memory)-1,size=batch_size-1).tolist()
@@ -165,6 +198,7 @@ class ActorCritic:
         next_state_sample=torch.FloatTensor(np.array([s[3] for s in samples]))
         action_sample_input=torch.FloatTensor(np.array([s[1] for s in samples]))
         rewards=torch.FloatTensor(np.array([s[2] for s in samples]))
+        workload_input=torch.FloatTensor(np.array([s[4] for s in samples]))
         
         # if torch.cuda.is_available():
         #     current_state_sample.cuda()
@@ -173,7 +207,7 @@ class ActorCritic:
         #     rewards.cuda()
 
         ## Train actor
-        a=self.actor_model(current_state_sample)
+        a=self.actor_model(current_state_sample,workload_input)
         q=self.critic_model(current_state_sample,a)
         a_loss=-torch.mean(q)
         self.actor_optimizer.zero_grad()
@@ -181,7 +215,7 @@ class ActorCritic:
         self.actor_optimizer.step()
 
         ##Train critic
-        a_=self.target_actor_model(next_state_sample)
+        a_=self.target_actor_model(next_state_sample,workload_input)
         q_=self.target_critic_model(next_state_sample,a_)
         q_target=rewards+self.gamma*q_
         q_eval=self.critic_model(current_state_sample,action_sample_input)
@@ -189,10 +223,6 @@ class ActorCritic:
         self.critic_optimizer.zero_grad()
         td_error.backward()
         self.critic_optimizer.step()
-
-    # ========================================================================= #
-    #                              Model Predictions                            #
-    # ========================================================================= #
 
     def act(self, cur_state):
         '''
@@ -216,7 +246,7 @@ class ActorCritic:
         reward=self.critic_model(cur_state,action).cpu().detach().numpy()[0][0]
         return reward
 
-class DDPG_Algorithm():
+class ATT_DDPG():
     def __init__(self,db_connector:Executor,feature_selector:FeatureSelector,workload:list,selected_knob_config=knob_config,latency_weight=9,throughput_weight=1,logger=None) -> None:
         self.db=db_connector
         self.workload=workload
@@ -228,31 +258,32 @@ class DDPG_Algorithm():
         else:
             self.logger=sys.stdout
 
-        knobs=selected_knob_config.keys()
+        knobs=list(selected_knob_config.keys())
         knob_info=self.db.get_knob_min_max(knobs)
-        self.knob_names=[]
-        self.knob_min=[]
-        self.knob_max=[]
-        self.knob_granularity=[]
-        self.knob_type=[]
-        for key in knob_info:
-            self.knob_names.append(key)
-            if "min" in selected_knob_config[key]:
-                self.knob_min.append(selected_knob_config[key]["min"])
-            else:
-                self.knob_min.append(knob_info[key]['min'])
-            if "max" in selected_knob_config[key]:
-                self.knob_max.append(selected_knob_config[key]["max"])
-            else:
-                self.knob_max.append(knob_info[key]['max'])
-            if "granularity" in selected_knob_config[key]:
-                self.knob_granularity.append(selected_knob_config[key]["granularity"])
-            else:
-                self.knob_granularity.append(knob_info[key]['granularity'])
-            self.knob_type.append(knob_info[key]['type'])
-        self.knob_min=np.array(self.knob_min)
-        self.knob_max=np.array(self.knob_max)
-        self.knob_granularity=np.array(self.knob_granularity)
+        self.knob_names,self.knob_min,self.knob_max,self.knob_granularity,self.knob_type=modifyKnobConfig(knob_info,selected_knob_config)
+        # self.knob_names=[]
+        # self.knob_min=[]
+        # self.knob_max=[]
+        # self.knob_granularity=[]
+        # self.knob_type=[]
+        # for key in knob_info:
+        #     self.knob_names.append(key)
+        #     if "min" in selected_knob_config[key]:
+        #         self.knob_min.append(selected_knob_config[key]["min"])
+        #     else:
+        #         self.knob_min.append(knob_info[key]['min'])
+        #     if "max" in selected_knob_config[key]:
+        #         self.knob_max.append(selected_knob_config[key]["max"])
+        #     else:
+        #         self.knob_max.append(knob_info[key]['max'])
+        #     if "granularity" in selected_knob_config[key]:
+        #         self.knob_granularity.append(selected_knob_config[key]["granularity"])
+        #     else:
+        #         self.knob_granularity.append(knob_info[key]['granularity'])
+        #     self.knob_type.append(knob_info[key]['type'])
+        # self.knob_min=np.array(self.knob_min)
+        # self.knob_max=np.array(self.knob_max)
+        # self.knob_granularity=np.array(self.knob_granularity)
 
         self.action_num=len(self.knob_names)
         db_state=self.db.get_db_state()
@@ -263,7 +294,6 @@ class DDPG_Algorithm():
         self.model=ActorCritic(self.state_num,self.action_num)
     
     def run_workload(self):
-        self.db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
         thread_num=self.db.get_max_thread_num()
         db_state=self.db.get_db_state()
         latency,throughput=self.db.run_job(thread_num,self.workload)
@@ -279,7 +309,7 @@ class DDPG_Algorithm():
         self.logger.write("Knob value: "+str(knob_value)+"\n")
         self.db.change_knob(self.knob_names,knob_value,self.knob_type)
 
-    def train(self,total_epoch,epoch_steps,save_epoch_interval,save_folder):
+    def train(self,workload_embedding,total_epoch,epoch_steps,save_epoch_interval,save_folder):
         for epoch in range(total_epoch): 
             self.db.reset_knob(self.knob_names)
             self.init_latency,self.init_throughput,current_state=self.run_workload()
@@ -288,17 +318,17 @@ class DDPG_Algorithm():
 
             for step in range(epoch_steps):
                 self.logger.write("Current state: "+str(current_state)+"\n")
-                action=self.model.act(current_state)
+                action=self.model.act(current_state,workload_embedding)
                 self.take_action(action)
                 latency,throughput,new_state=self.run_workload()
                 self.logger.write("Latency: "+str(round(latency,4))+"\nThroughput: "+str(round(throughput,4))+"\n")
                 reward=self.calculate_reward(latency,throughput)
-                self.model.remember(current_state,action,reward,new_state)
+                self.model.remember(current_state,action,reward,new_state,workload_embedding)
                 self.model.train()
                 current_state=new_state
                 self.logger.write("\n")
             
-            if ((epoch+1)%save_epoch_interval)==0:
+            if (epoch+1)%save_epoch_interval==0:
                 torch.save(self.model.actor_model.state_dict(),os.path.join(save_folder,"actor_epoch_{}.pkl".format(epoch)))
                 torch.save(self.model.critic_model.state_dict(),os.path.join(save_folder,"critic_epoch_{}.pkl".format(epoch)))
     
@@ -323,4 +353,3 @@ class DDPG_Algorithm():
         self.last_latency=latency
         self.last_throughput=throughput
         return reward
-        

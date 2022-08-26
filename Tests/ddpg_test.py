@@ -10,8 +10,8 @@ import pickle
 if __name__=='__main__':
     WORKLOAD="../Workload/TestWorkload/workload.bin"
     MODEL_SAVE_FOLDER="../TuningAlgorithm/model/"
-    FEATURE_SELECTOR_MODEL="../FeatureSelection/model/fa_kmeans_file.pkl"
-    LOGGER_PATH="../log/ddpg_job_pg.log"
+    FEATURE_SELECTOR_MODEL=None
+    LOGGER_PATH="../log/ddpg_job_pg_2.log"
     TRAIN_EPOCH=300
     EPOCH_TOTAL_STEPS=500
     SAVE_EPOCH_INTERVAL=30

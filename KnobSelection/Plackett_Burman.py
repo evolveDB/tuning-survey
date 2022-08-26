@@ -4,6 +4,7 @@ import numpy as np
 import sys
 sys.path.append("../")
 from DBConnector.BaseExecutor import *
+from config import *
 class Plackett_Burman():
     def __init__(self) -> None:
         pass
@@ -43,6 +44,7 @@ class Plackett_Burman():
         for query in sample_workload:
             rb_effect=[0 for i in range(len(knob_names))]
             db.change_knob(knob_name=knob_names,knob_value=knob_max,knob_type=knob_type)
+            db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
             latency,_=db.run_job(1,[query])
             for i in range(len(knob_names)):
                 rb_effect[i]+=latency
@@ -55,6 +57,7 @@ class Plackett_Burman():
                     else:
                         current_knob_value.append(knob_min[j])
                 db.change_knob(knob_name=knob_names,knob_value=current_knob_value,knob_type=knob_type)
+                db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
                 print("Change Knob: "+str(current_knob_value))
                 latency,_=db.run_job(1,[query])
                 print("Latency: "+str(latency))
@@ -70,6 +73,7 @@ class Plackett_Burman():
 
             if foldover:
                 db.change_knob(knob_names,knob_min,knob_type)
+                db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
                 latency,_=db.run_job(1,[query])
                 for i in range(len(knob_names)):
                     rb_effect[i]-=latency
@@ -82,6 +86,7 @@ class Plackett_Burman():
                         else:
                             current_knob_value.append(knob_max[j])
                     db.change_knob(knob_names,current_knob_value,knob_type)
+                    db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
                     print("Change Knob: "+str(current_knob_value))
                     latency,_=db.run_job(1,[query])
                     print("Latency: "+str(latency))

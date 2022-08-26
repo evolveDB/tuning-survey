@@ -6,15 +6,16 @@ from config import *
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 import numpy as np
-import pickle
+import random
 
 class CART():
-    def __init__(self,LHS_N:int,rf_nestimator=100,max_depth=None,max_leaf_nodes=None) -> None:
+    def __init__(self,LHS_N:int,rf_nestimator=100,max_depth=None,max_leaf_nodes=None,num_of_trials=10) -> None:
         self.n=LHS_N
         self.n_estimator=rf_nestimator
         self.max_depth=max_depth
         self.max_leaf_nodes=max_leaf_nodes
         self.argsort=None
+        self.num_of_trials=num_of_trials
 
     def fit(self,db:Executor,knob_names:list,knob_max:list,knob_min:list,knob_type:list,workload:list):
         self.knob_names=knob_names
@@ -23,18 +24,23 @@ class CART():
             knob_granularity.append((knob_max[i]-knob_min[i])/self.n)
         x=[]
         y=[]
-        for i in range(self.n):
-            knob_value=[]
-            for j in range(len(knob_names)):
-                knob_value.append(knob_min[j]+knob_granularity[j]*i)
-            db.change_knob(knob_names,knob_value,knob_type)
-            print("Change Knob: "+str(knob_value))
-            thread_num=db.get_max_thread_num()
-            latency,throughput=db.run_job(thread_num,workload)
-            print("Latency: "+str(latency))
-            print("Throughput: "+str(throughput))
-            x.append(knob_value)
-            y.append(latency)
+        for trial in range(self.num_of_trials):
+            sample=[]
+            for i in range(len(knob_names)):
+                sample.append(random.sample(range(self.n),self.n))
+            for i in range(self.n):
+                knob_value=[]
+                for j in range(len(knob_names)):
+                    knob_value.append(knob_min[j]+knob_granularity[j]*sample[j][i])
+                db.change_knob(knob_names,knob_value,knob_type)
+                print("Change Knob: "+str(knob_value))
+                db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
+                thread_num=db.get_max_thread_num()
+                latency,throughput=db.run_job(thread_num,workload)
+                print("Latency: "+str(latency))
+                print("Throughput: "+str(throughput))
+                x.append(knob_value)
+                y.append(latency)
         scaler=StandardScaler()
         x=scaler.fit_transform(x)
         model=RandomForestRegressor(n_estimators=self.n_estimator,max_depth=self.max_depth,max_leaf_nodes=self.max_leaf_nodes)

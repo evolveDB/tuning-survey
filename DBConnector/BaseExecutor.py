@@ -58,4 +58,8 @@ class Executor(metaclass=abc.ABCMeta):
     def get_knob_min_max(self,knob_names)->dict:
         pass
 
+    @abc.abstractmethod
+    def restart_db(self,remote_port,remote_user,remote_password):
+        pass
+
     

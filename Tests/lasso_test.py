@@ -8,9 +8,9 @@ import os
 
 if __name__=='__main__':
     WORKLOAD="../Workload/TestWorkload/workload.bin"
-    TRAIN_DATA_SIZE=50
-    DATA_PATH="../data/lasso_train_data2.pkl"
-    MODEL_SAVE_PATH="../KnobSelection/model/lasso_model2.pkl"
+    TRAIN_DATA_SIZE=200
+    DATA_PATH="../data/lasso_train_data4.pkl"
+    MODEL_SAVE_PATH="../KnobSelection/model/lasso_model4.pkl"
     f=open(WORKLOAD,'rb')
     workload=pickle.load(f)
     f.close()
@@ -53,9 +53,12 @@ if __name__=='__main__':
             knob_value=np.round((knob_max-knob_min)/knob_granularity*action)*knob_granularity+knob_min
             print(knob_value)
             db.change_knob(knob_names,knob_value,knob_type)
+            db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
             thread_num=db.get_max_thread_num()
             before_state=db.get_db_state()
-            db.run_job(thread_num,workload)
+            l,t=db.run_job(thread_num,workload)
+            print("Latency: "+str(l))
+            print("Throughput: "+str(t))
             time.sleep(0.1)
             after_state=db.get_db_state()
             state=np.array(after_state)-np.array(before_state)
@@ -68,6 +71,7 @@ if __name__=='__main__':
         f=open(DATA_PATH,'wb')
         pickle.dump(data,f)
         f.close()
+        db.reset_knob(knob_names)
     else:
         knobs=knob_config.keys()
         knob_names=list(knobs)
@@ -81,6 +85,9 @@ if __name__=='__main__':
     model.fit(knob_data,metric_data)
     f=open(MODEL_SAVE_PATH,'wb')
     pickle.dump(model,f)
+    f.close()
+    f=open("../log/lasso_result3.log",'w')
+    f.write(str(model.get_top_rank()))
     f.close()
     print(model.get_top_rank())
 

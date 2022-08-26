@@ -18,6 +18,8 @@ class Lasso():
 
         scaler=StandardScaler()
         knob_values=scaler.fit_transform(knob_values)
+        metric_scaler=StandardScaler()
+        metrics=metric_scaler.fit_transform(metrics)
         self.alpha,self.coef,_=lasso_path(knob_values,metrics)
         self.ranking=[]
         self.feature_steps=[[] for i in range(len(self.knobs_names))]

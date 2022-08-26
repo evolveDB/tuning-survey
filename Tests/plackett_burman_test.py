@@ -39,14 +39,17 @@ if __name__=='__main__':
     knob_min=np.array(knob_min)
     knob_max=np.array(knob_max)
     knob_granularity=np.array(knob_granularity)
-    
+    db.reset_knob(knob_names)
     model.fit(db,knob_names,knob_min,knob_max,knob_type,workload,False,0.1)
     f=open(MODEL_SAVE_FILE,'wb')
     pickle.dump(model,f)
     f.close()
-
+    db.reset_knob(knob_names)
+    f=open("../log/p_and_b_result.log",'w')
+    f.write(str(model.get_top_rank()))
+    f.close()
     print(model.get_top_rank())
-    print(model.rank_knob(knob_min))
+    # print(model.rank_knob(knob_min))
 
 #['geqo_selection_bias', 'geqo_pool_size', 'vacuum_cost_limit', 'from_collapse_limit', 'statement_timeout', 'join_collapse_limit', 'vacuum_cost_page_hit', 'geqo_threshold', 'max_stack_depth', 'geqo_effort', 'vacuum_multixact_freeze_min_age', 'vacuum_cost_delay', 'vacuum_multixact_freeze_table_age', 'temp_file_limit', 'temp_buffers', 'geqo_generations', 'commit_siblings', 'default_statistics_target', 'work_mem', 'deadlock_timeout', 'maintenance_work_mem', 'vacuum_freeze_min_age', 'vacuum_freeze_table_age', 'commit_delay', 'effective_cache_size', 'vacuum_cost_page_miss', 'effective_io_concurrency', 'vacuum_cost_page_dirty']
 #(['geqo_selection_bias', 'geqo_pool_size', 'vacuum_cost_limit', 'from_collapse_limit', 'statement_timeout', 'join_collapse_limit', 'vacuum_cost_page_hit', 'geqo_threshold', 'max_stack_depth', 'geqo_effort', 'vacuum_multixact_freeze_min_age', 'vacuum_cost_delay', 'vacuum_multixact_freeze_table_age', 'temp_file_limit', 'temp_buffers', 'geqo_generations', 'commit_siblings', 'default_statistics_target', 'work_mem', 'deadlock_timeout', 'maintenance_work_mem', 'vacuum_freeze_min_age', 'vacuum_freeze_table_age', 'commit_delay', 'effective_cache_size', 'vacuum_cost_page_miss', 'effective_io_concurrency', 'vacuum_cost_page_dirty'], [1.5, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 2.0, 100.0, 1.0, 0.0, 0.0, 0.0, -1.0, 100.0, 0.0, 0.0, 1.0, 64.0, 1.0, 1024.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])

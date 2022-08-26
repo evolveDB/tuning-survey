@@ -4,6 +4,7 @@ from dbutils.pooled_db import PooledDB
 from .BaseExecutor import *
 import queue
 import time
+import paramiko
 
 class MysqlExecutor(Executor):
     def __init__(self,ip,port,user,password,database):
@@ -29,6 +30,7 @@ class MysqlExecutor(Executor):
                 sql="set global "+str(knob_name[i])+"="+str(int(knob_value[i]))+";"
             cur.execute(sql)
         cur.close()
+        conn.commit()
         conn.close()
     
     def reset_knob(self, knob_name: list):
@@ -40,6 +42,7 @@ class MysqlExecutor(Executor):
             sql='set @@GLOBAL.'+knob+'=DEFAULT;'
             cur.execute(sql)
         cur.close()
+        conn.commit()
         conn.close()
 
     def run_job(self, thread_num, workload: list):
@@ -152,3 +155,13 @@ class MysqlExecutor(Executor):
         cur.close()
         conn.close()
         return result
+
+    def restart_db(self,remote_port,remote_user,remote_password):
+        ssh=paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname=self.ip,port=int(remote_port),username=remote_user,password=remote_password)
+        stdin,stdout,stderr=ssh.exec_command("sudo -S service mysql restart")
+        time.sleep(0.1)
+        stdin.write(remote_password+"\n")
+        stdin.flush()
+        ssh.close()
