@@ -18,11 +18,22 @@ class PostgresExecutor(Executor):
         self.total_latency=0
         self.success_query=0
         self.lock=threading.Lock()
+    
+    def get_connection(self):
+        conn=None
+        flag=True
+        while flag:
+            flag=False
+            try:
+                conn=psycopg2.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
+            except:
+                flag=True
+        return conn
 
     def change_knob(self, knob_name, knob_value,knob_type):
         if len(knob_name)!=len(knob_value):
             raise Exception("len(knob_name) should be equal to len(knob_value)")
-        conn=psycopg2.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
+        conn=self.get_connection()
         cur=conn.cursor()
         for i in range(len(knob_name)):
             if knob_type[i]=="integer":
@@ -34,14 +45,43 @@ class PostgresExecutor(Executor):
         conn.commit()
         conn.close()
     
+    def change_restart_knob(self,knob_name,knob_value,knob_type):
+        if len(knob_name)!=len(knob_value):
+            raise Exception("len(knob_name) should be equal to len(knob_value)")
+        conn=self.get_connection()
+        old_isolation_level = conn.isolation_level
+        conn.set_isolation_level(0)
+        cur=conn.cursor()
+        for i in range(len(knob_name)):
+            if knob_type[i]=="integer":
+                sql="alter system set "+str(knob_name[i])+"="+str(int(knob_value[i]))
+            else:
+                sql="alter system set "+str(knob_name[i])+"="+str(knob_value[i])
+            cur.execute(sql)
+        cur.close()
+        conn.set_isolation_level(old_isolation_level)
+        conn.close()
+
     def reset_knob(self, knob_name: list):
-        conn=psycopg2.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
+        conn=self.get_connection()
         cur=conn.cursor()
         for knob in knob_name:
             sql="alter database "+str(self.database)+" reset "+str(knob)
             cur.execute(sql)
         cur.close()
         conn.commit()
+        conn.close()
+    
+    def reset_restart_knob(self,knob_name:list):
+        conn=self.get_connection()
+        old_isolation_level = conn.isolation_level
+        conn.set_isolation_level(0)
+        cur=conn.cursor()
+        for knob in knob_name:
+            sql="alter system reset "+str(knob)
+            cur.execute(sql)
+        cur.close()
+        conn.set_isolation_level(old_isolation_level)
         conn.close()
 
     def run_job(self, thread_num, workload: list):
@@ -118,10 +158,10 @@ class PostgresExecutor(Executor):
                     self.success_query+=1
                 self.total_latency+=interval
                 self.lock.release()
-                break
+                # break
 
     def get_db_state(self):
-        conn=psycopg2.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
+        conn=self.get_connection()
         cur=conn.cursor()
         sql="select * from pg_stat_database where datname='"+str(self.database)+"'"
         cur.execute(sql)
@@ -136,7 +176,7 @@ class PostgresExecutor(Executor):
 
     def get_max_thread_num(self):
         try:
-            conn=psycopg2.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
+            conn=self.get_connection()
             cur=conn.cursor()
             sql="show max_connections;"
             cur.execute(sql)
@@ -153,7 +193,7 @@ class PostgresExecutor(Executor):
     def get_knob_min_max(self, knob_names:list)->dict:
         result={}
         knob_tuple=str(tuple(knob_names))
-        conn=psycopg2.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
+        conn=self.get_connection()
         cur=conn.cursor()
         sql="select name, min_val, max_val,vartype from pg_settings where name in "+knob_tuple
         cur.execute(sql)

@@ -39,7 +39,15 @@ class Executor(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
+    def change_restart_knob(self,knob_name,knob_value,knob_type):
+        pass
+
+    @abc.abstractmethod
     def reset_knob(self,knob_name:list):
+        pass
+
+    @abc.abstractmethod
+    def reset_restart_knob(self,knob_name:list):
         pass
 
     @abc.abstractmethod

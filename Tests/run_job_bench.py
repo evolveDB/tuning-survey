@@ -13,9 +13,10 @@ db=PostgresExecutor(ip=db_config["host"],port=db_config["port"],user=db_config["
 # values=[1024,4096,32768,33554432,1073709056,2147483647]
 
 # db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
-# l,t=db.run_job(100,workload)
-# print(l)
-# print(t)
+thread_num=db.get_max_thread_num()
+l,t=db.run_job(thread_num,workload)
+print(l)
+print(t)
 
 # results=[[] for i in range(len(workload))]
 # for value in values:
@@ -34,15 +35,15 @@ db=PostgresExecutor(ip=db_config["host"],port=db_config["port"],user=db_config["
 # f.close()
 
 
-results=[]
-f=open("../log/effective_cache_size_test_from1_to8192_interval32.log",'w')
-for value in range(1,8192,32):
-    db.change_knob(["effective_cache_size"],[value],["integer"])
-    print("Change effective_cache_size: "+str(value))
-    db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
-    l,t=db.run_job(100,workload)
-    results.append([value,l,t])
-    print("Value: "+str(value)+", Latency: "+str(l)+", Throughput: "+str(t))
-    f.write("Value: "+str(value)+", Latency: "+str(l)+", Throughput: "+str(t)+"\n")
-    f.flush()
-f.close()
+# results=[]
+# f=open("../log/effective_cache_size_test_from1_to8192_interval32.log",'w')
+# for value in range(1,8192,32):
+#     db.change_knob(["effective_cache_size"],[value],["integer"])
+#     print("Change effective_cache_size: "+str(value))
+#     db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
+#     l,t=db.run_job(100,workload)
+#     results.append([value,l,t])
+#     print("Value: "+str(value)+", Latency: "+str(l)+", Throughput: "+str(t))
+#     f.write("Value: "+str(value)+", Latency: "+str(l)+", Throughput: "+str(t)+"\n")
+#     f.flush()
+# f.close()

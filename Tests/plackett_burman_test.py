@@ -1,19 +1,21 @@
 import sys
 sys.path.append("../")
 from KnobSelection.Plackett_Burman import *
-from DBConnector.PostgresExecutor import *
+from DBConnector.MysqlExecutor import *
 from config import *
 import pickle
 
 if __name__=='__main__':
-    WORKLOAD_FILE="../Workload/TestWorkload/workload.bin"
-    MODEL_SAVE_FILE="../KnobSelection/model/PB_model.pkl"
+    WORKLOAD_FILE="../Workload/TestWorkload/job_mysql.bin"
+    MODEL_SAVE_FILE="../KnobSelection/model/PB_model_0905_mysql.pkl"
     f=open(WORKLOAD_FILE,'rb')
     workload=pickle.load(f)
     f.close()
-    
-    db=PostgresExecutor(ip=db_config["host"],port=db_config["port"],user=db_config["user"],password=db_config["password"],database=db_config["dbname"])
+    start_time=time.time()
+    db=MysqlExecutor(ip=db_config["host"],port=db_config["port"],user=db_config["user"],password=db_config["password"],database=db_config["dbname"])
     model=Plackett_Burman()
+    knob_config=nonrestart_knob_config
+    knob_config.update(restart_knob_config)
     knob_names=list(knob_config.keys())
     knob_info=db.get_knob_min_max(knob_names)
     knob_names=[]
@@ -39,14 +41,17 @@ if __name__=='__main__':
     knob_min=np.array(knob_min)
     knob_max=np.array(knob_max)
     knob_granularity=np.array(knob_granularity)
-    db.reset_knob(knob_names)
+    db.reset_restart_knob(knob_names)
     model.fit(db,knob_names,knob_min,knob_max,knob_type,workload,False,0.1)
+    end_time=time.time()
     f=open(MODEL_SAVE_FILE,'wb')
     pickle.dump(model,f)
     f.close()
-    db.reset_knob(knob_names)
-    f=open("../log/p_and_b_result.log",'w')
+    db.reset_restart_knob(knob_names)
+    f=open("../log/p_and_b_result_0905_mysql.log",'a')
     f.write(str(model.get_top_rank()))
+    f.write("\n")
+    f.write("Training time:"+str(end_time-start_time)+"\n")
     f.close()
     print(model.get_top_rank())
     # print(model.rank_knob(knob_min))

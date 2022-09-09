@@ -18,10 +18,21 @@ class MysqlExecutor(Executor):
         self.success_query=0
         self.lock=threading.Lock()
 
-    def change_knob(self, knob_name, knob_value,knob_type:None):
+    def get_connection(self):
+        conn=None
+        flag=True
+        while flag:
+            flag=False
+            try:
+                conn=pymysql.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
+            except:
+                flag=True
+        return conn
+
+    def change_knob(self, knob_name, knob_value,knob_type=None):
         if len(knob_name)!=len(knob_value):
             raise Exception("len(knob_name) should be equal to len(knob_value)")
-        conn=pymysql.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
+        conn=self.get_connection()
         cur=conn.cursor()
         for i in range(len(knob_name)):
             if knob_type is not None and knob_type[i]=='float':
@@ -32,18 +43,30 @@ class MysqlExecutor(Executor):
         cur.close()
         conn.commit()
         conn.close()
+
+    def change_restart_knob(self,knob_name,knob_value,knob_type):
+        self.change_knob(knob_name,knob_value,knob_type)
     
     def reset_knob(self, knob_name: list):
-        conn=pymysql.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
+        conn=self.get_connection()
         cur=conn.cursor()
         for knob in knob_name:
             sql='set @@SESSION.'+str(knob)+'=DEFAULT;'
-            cur.execute(sql)
+            try:
+                cur.execute(sql)
+            except:
+                pass
             sql='set @@GLOBAL.'+knob+'=DEFAULT;'
-            cur.execute(sql)
+            try:
+                cur.execute(sql)
+            except:
+                pass
         cur.close()
         conn.commit()
         conn.close()
+    
+    def reset_restart_knob(self,knob_name:list):
+        self.reset_knob(knob_name)
 
     def run_job(self, thread_num, workload: list):
         self.pool=PooledDB(
@@ -116,19 +139,19 @@ class MysqlExecutor(Executor):
 
     def get_db_state(self):
         state_list = []
-        conn=pymysql.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
+        conn=self.get_connection()
         cur=conn.cursor()
         sql = "SELECT count FROM INFORMATION_SCHEMA.INNODB_METRICS where status='enabled'"
         cur.execute(sql)
         result=cur.fetchall()
         for s in result:
-            state_list.append(s['count'])
+            state_list.append(s[0])
         cur.close()
         conn.close()
         return state_list
 
     def get_max_thread_num(self):
-        conn=pymysql.connect(host=self.ip,user=self.user,password=self.password,database=self.database,port=self.port)
+        conn=self.get_connection()
         cur=conn.cursor()
         sql="show variables like 'max_connections';"
         cur.execute(sql)
@@ -156,12 +179,13 @@ class MysqlExecutor(Executor):
         conn.close()
         return result
 
-    def restart_db(self,remote_port,remote_user,remote_password):
+    def restart_db(self,remote_port,remote_user,remote_password,remote_ip='10.20.5.110'):
         ssh=paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname=self.ip,port=int(remote_port),username=remote_user,password=remote_password)
+        ssh.connect(hostname=remote_ip,port=int(remote_port),username=remote_user,password=remote_password)
         stdin,stdout,stderr=ssh.exec_command("sudo -S service mysql restart")
         time.sleep(0.1)
         stdin.write(remote_password+"\n")
         stdin.flush()
         ssh.close()
+        time.sleep(2)

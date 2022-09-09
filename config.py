@@ -19,16 +19,22 @@ class Logger():
         f.close()
 
 db_config=None
-knob_config=None
+nonrestart_knob_config=None
+restart_knob_config=None
 remote_config=None
 cfp=DictParser()
-cfp.read("../my_config.ini", encoding="utf-8")
+cfp.read("../my_config_mysql.ini", encoding="utf-8")
 config_dict=cfp.read_dict()
 db_config=config_dict["database"]
 remote_config=config_dict["remote-access"]
-knob_config=config_dict["Non-restart Knobs"]
-for key in knob_config:
-    knob_config[key] = json.loads(str(knob_config[key]).replace("\'", "\""))
+nonrestart_knob_config=config_dict["Non-restart Knobs"]
+restart_knob_config=config_dict["restart Knobs"]
+for key in nonrestart_knob_config:
+    nonrestart_knob_config[key] = json.loads(str(nonrestart_knob_config[key]).replace("\'", "\""))
+for key in restart_knob_config:
+    restart_knob_config[key] = json.loads(str(restart_knob_config[key]).replace("\'", "\""))
+# knob_config=nonrestart_knob_config
+# knob_config.update(restart_knob_config)
     
 def modifyKnobConfig(knob_info,user_define_config):
     knob_names=[]

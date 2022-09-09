@@ -217,7 +217,7 @@ class ActorCritic:
         return reward
 
 class DDPG_Algorithm():
-    def __init__(self,db_connector:Executor,feature_selector:FeatureSelector,workload:list,selected_knob_config=knob_config,latency_weight=9,throughput_weight=1,logger=None) -> None:
+    def __init__(self,db_connector:Executor,feature_selector:FeatureSelector,workload:list,selected_knob_config=nonrestart_knob_config,latency_weight=9,throughput_weight=1,logger=None) -> None:
         self.db=db_connector
         self.workload=workload
         self.feature_selector=feature_selector
@@ -277,11 +277,14 @@ class DDPG_Algorithm():
     def take_action(self,action):
         knob_value=np.round((self.knob_max-self.knob_min)/self.knob_granularity*action)*self.knob_granularity+self.knob_min
         self.logger.write("Knob value: "+str(knob_value)+"\n")
-        self.db.change_knob(self.knob_names,knob_value,self.knob_type)
+        self.db.change_restart_knob(self.knob_names,knob_value,self.knob_type)
+        self.db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
 
     def train(self,total_epoch,epoch_steps,save_epoch_interval,save_folder):
         for epoch in range(total_epoch): 
-            self.db.reset_knob(self.knob_names)
+            self.logger.write("Epoch: "+str(epoch)+"\n")
+            self.db.reset_restart_knob(self.knob_names)
+            self.db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
             self.init_latency,self.init_throughput,current_state=self.run_workload()
             self.last_latency=self.init_latency
             self.last_throughput=self.init_throughput

@@ -43,7 +43,7 @@ class Plackett_Burman():
         workload_ranking_record=[]
         for query in sample_workload:
             rb_effect=[0 for i in range(len(knob_names))]
-            db.change_knob(knob_name=knob_names,knob_value=knob_max,knob_type=knob_type)
+            db.change_restart_knob(knob_name=knob_names,knob_value=knob_max,knob_type=knob_type)
             db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
             latency,_=db.run_job(1,[query])
             for i in range(len(knob_names)):
@@ -56,7 +56,7 @@ class Plackett_Burman():
                         current_knob_value.append(knob_max[j])
                     else:
                         current_knob_value.append(knob_min[j])
-                db.change_knob(knob_name=knob_names,knob_value=current_knob_value,knob_type=knob_type)
+                db.change_restart_knob(knob_name=knob_names,knob_value=current_knob_value,knob_type=knob_type)
                 db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
                 print("Change Knob: "+str(current_knob_value))
                 latency,_=db.run_job(1,[query])
@@ -72,7 +72,7 @@ class Plackett_Burman():
                 current_knob[len(current_knob)-1]=tmp
 
             if foldover:
-                db.change_knob(knob_names,knob_min,knob_type)
+                db.change_restart_knob(knob_names,knob_min,knob_type)
                 db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
                 latency,_=db.run_job(1,[query])
                 for i in range(len(knob_names)):
@@ -85,7 +85,7 @@ class Plackett_Burman():
                             current_knob_value.append(knob_min[j])
                         else:
                             current_knob_value.append(knob_max[j])
-                    db.change_knob(knob_names,current_knob_value,knob_type)
+                    db.change_restart_knob(knob_names,current_knob_value,knob_type)
                     db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
                     print("Change Knob: "+str(current_knob_value))
                     latency,_=db.run_job(1,[query])
