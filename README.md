@@ -30,6 +30,7 @@ pip install -r requirements.txt
 * Change config.ini so that the algorithms could run on your own machine. Also, you can choose the knobs that needs to tune and add some constraints on the knob value(e.g., min value, max value) if you want.
 
 * Design new methods based on previous algorithms
+* Compare the impact of different data preprocessing methods on knob selection methods(e.g., Standardization, Z-scores Standardization, min-max Standardization on Lasso) 
 
 ## Datasets
 
