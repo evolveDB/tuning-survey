@@ -16,7 +16,7 @@
 
 ## Overview
 
-In this survey, we implemented and tested existing methods in learned configuration tuning. The methods are divided into three categories, i.e., knob selection algorithms, feature selection algorithms, and tuning algorithms.
+In this survey, we implemented and tested existing methods in learned configuration tuning. The methods are divided into four categories, i.e., data pre-processing, knob selection algorithms, feature selection algorithms, and tuning algorithms.
 
 <table>
     <tbody>
