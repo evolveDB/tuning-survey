@@ -18,6 +18,23 @@
 
 In this survey, we implemented and tested existing methods in learned configuration tuning. The methods are divided into three categories, i.e., knob selection algorithms, feature selection algorithms, and tuning algorithms.
 
+<table>
+    <tbody>
+    <tr valign="top">
+        <td>Pre-Processing</td>    
+        <td>Knob Selection</td>
+        <td>Feature Selection</td>
+        <td>Tuning Algorithms</td>
+    </tr>
+    <tr valign="top">
+        <td> Standardization <br> Z-scores Standardization <br> min-max Standardization </td>
+        <td> Lasso <br> CART <br> P&B </td>
+        <td> K-Means <br> QueryEmbed <br> R/W-Ratio <br> TF_IDF </td>
+        <td> Heuristic <br> GaussianProcess <br> DNN <br> DDPG <br> Attention+DDPG </td>
+    </tr>
+    </tbody>
+</table>
+
 
 ## Installation
 
