@@ -27,9 +27,9 @@ pip install -r requirements.txt
 
 ## What can you do via this repository?
 
-* Run the tests and read test codes in ./Tests folder.
+* Read and run the test codes in ./Tests folder.
 
-* Change config.ini so that the algorithms could run on your own machine. Also, you can choose the knobs that need to tune and add some constraints on the knob value(e.g., min value, max value) if you want.
+* Change the config.ini file so that the algorithms could run on your own machine. Also, you can choose the knobs that need to tune and add some constraints on the knob value(e.g., min value, max value) if you want.
 
 * Design new algorithms based on the previous tuning methods.
 
