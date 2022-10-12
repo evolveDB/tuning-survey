@@ -16,7 +16,8 @@
 
 ## Overview
 
-In this survey, we implemented and tested current methods regarding to database configuration tuning. We group the methods into three categories, namely knob selection algorithms, feature selection algorithms and tuning algorithms.
+In this survey, we implemented and tested existing methods in learned configuration tuning. The methods are divided into three categories, i.e., knob selection algorithms, feature selection algorithms, and tuning algorithms.
+
 
 ## Installation
 
