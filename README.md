@@ -108,7 +108,7 @@ We have some datasets in the ./Workload folder. You can also add your own datase
 * Towards Dynamic and Safe Configuration Tuning for Cloud Databases (SIGMOD 2022)
 
 
-### ExperimentalPapers/Survey/Tutorial
+### Tutorial/Survey/Experiments
 
 * An inquiry into machine learning-based automatic configuration tuning services on real-world database management systems (VLDB 2021)
 
