@@ -51,22 +51,22 @@ Note *M* denotes the manually selected knobs.
 
 ***(VM) Hardware relevant knobs***
 
-**(1) innodb_buffer_pool_size**  
+(1) innodb_buffer_pool_size  
     ---innodb_buffer_pool_size = N * innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances
 
-**(2) innodb_log_file_size**  
+(2) innodb_log_file_size  
 
-**(3) innodb_flush_log_at_trx_commit** 
+(3) innodb_flush_log_at_trx_commit 
 
-**(4) innodb_flush_method**
+(4) innodb_flush_method
 
 ***Best Performance Practices***   
 
-**(1) innodb_file_per_table**   
+(1) innodb_file_per_table   
 
-**(2) innodb_stats_on_metadata**
+(2) innodb_stats_on_metadata
 
-**(3) innodb_buffer_pool_instances**
+(3) innodb_buffer_pool_instances
 
-**(4) query_cache_type & query_cache_size**
+(4) query_cache_type & query_cache_size
 
