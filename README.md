@@ -75,7 +75,7 @@ We have some datasets in the ./Workload folder. You can also add your own datase
 
 * OpenTuner: An Extensible Framework for Program Autotuning (PACT, 2014)
 
-* Tapping the Performance Potential of Systems via Automatic Configuration Tuning (SoCC, 2017)
+* BestConfig: Tapping the Performance Potential of Systems via Automatic Configuration Tuning (SoCC, 2017)
 
 * Tuning Database Conﬁguration Parameters with iTuned. (VLDB, 2009)
 
@@ -91,13 +91,15 @@ We have some datasets in the ./Workload folder. You can also add your own datase
 
 * The Case for NLP-Enhanced Database Tuning: Towards Tuning Tools that "Read the Manual" (VLDB 2021)
 
+* DB-BERT: a Database Tuning Tool that “Reads the Manual” (SIGMOD 2022)
+
 * CGPTuner: a Contextual Gaussian Process Bandit Approach for the Automatic Tuning of IT Configurations Under Varying Workload Conditions (VLDB 2021)
 
-* Universal Database Optimization using Reinforcement Learning (2021)
+* Universal Database Optimization using Reinforcement Learning (VLDB 2021)
 
 * ResTune: Resource Oriented Tuning Boosted by Meta-Learning for Cloud Databases (SIGMOD 2021)
 
-* LlamaTune- Sample-Efficient DBMS Configuration Tuning ( 2022 VLDB )
+* LlamaTune: Sample-Efficient DBMS Configuration Tuning (VLDB 2022)
 
 ### Tuning Transferring
 
@@ -114,10 +116,9 @@ We have some datasets in the ./Workload folder. You can also add your own datase
 
 * Facilitating Database Tuning with Hyper-Parameter Optimization- A Comprehensive Experimental Evaluation (2021 VLDB)
 
-* Speedup Your Analytics: Automatic Parameter Tuning for Databases and Big Data Systems
+* Speedup Your Analytics: Automatic Parameter Tuning for Databases and Big Data Systems (tutorial)
 
-* A Survey on Automatic Parameter Tuning for Big Data Processing Systems
-
+* A Survey on Automatic Parameter Tuning for Big Data Processing Systems (survey for big-data-system tuning)
 
 
 ## Issues
