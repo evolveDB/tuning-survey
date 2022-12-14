@@ -1,5 +1,5 @@
 
-### [Performance-Critical Knobs (for MySQL)](https://www.percona.com/blog/2020/06/30/mysql-101-parameters-to-tune-for-mysql-performance/)
+### [Example Performance-Critical Knobs (for MySQL)](https://www.percona.com/blog/2020/06/30/mysql-101-parameters-to-tune-for-mysql-performance/)
 
 Note *M* denotes the manually selected knobs.
 
