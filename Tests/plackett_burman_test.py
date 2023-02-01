@@ -18,6 +18,7 @@ if __name__=='__main__':
     knob_config.update(restart_knob_config)
     knob_names=list(knob_config.keys())
     knob_info=db.get_knob_min_max(knob_names)
+    print(knob_info)
     knob_names=[]
     knob_min=[]
     knob_max=[]

@@ -42,7 +42,7 @@ def modifyKnobConfig(knob_info,user_define_config):
     knob_max=[]
     knob_granularity=[]
     knob_type=[]
-    for key in knob_info:
+    for key in user_define_config:
         knob_names.append(key)
         if "min" in user_define_config[key]:
             knob_min.append(user_define_config[key]["min"])

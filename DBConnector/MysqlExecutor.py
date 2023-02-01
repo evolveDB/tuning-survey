@@ -1,3 +1,4 @@
+from fileinput import close
 from unittest import result
 import pymysql
 from dbutils.pooled_db import PooledDB
@@ -5,6 +6,7 @@ from .BaseExecutor import *
 import queue
 import time
 import paramiko
+import os
 
 class MysqlExecutor(Executor):
     def __init__(self,ip,port,user,password,database):
@@ -45,7 +47,19 @@ class MysqlExecutor(Executor):
         conn.close()
 
     def change_restart_knob(self,knob_name,knob_value,knob_type):
-        self.change_knob(knob_name,knob_value,knob_type)
+        if len(knob_name)!=len(knob_value):
+            raise Exception("len(knob_name) should be equal to len(knob_value)")
+        conn=self.get_connection()
+        cur=conn.cursor()
+        for i in range(len(knob_name)):
+            if knob_type is not None and knob_type[i]=='float':
+                sql="set persist "+str(knob_name[i])+"="+str(knob_value[i])+";"
+            else:
+                sql="set persist "+str(knob_name[i])+"="+str(int(knob_value[i]))+";"
+            cur.execute(sql)
+        cur.close()
+        conn.commit()
+        conn.close()
     
     def reset_knob(self, knob_name: list):
         conn=self.get_connection()
@@ -66,7 +80,14 @@ class MysqlExecutor(Executor):
         conn.close()
     
     def reset_restart_knob(self,knob_name:list):
-        self.reset_knob(knob_name)
+        conn=self.get_connection()
+        cur=conn.cursor()
+        for i in range(len(knob_name)):
+            sql="set persist "+str(knob_name[i])+"=DEFAULT;"
+            cur.execute(sql)
+        cur.close()
+        conn.commit()
+        conn.close()
 
     def run_job(self, thread_num, workload: list):
         self.pool=PooledDB(
@@ -103,7 +124,7 @@ class MysqlExecutor(Executor):
         main_queue.join()
         self.pool.close()
         run_time = round(time.time() - start, 1)
-        avg_lat = self.total_latency / self.success_query
+        avg_lat = self.total_latency / (self.success_query+1e-5)
         avg_qps = self.success_query / (run_time+1e-5)
         # print("Latency: "+str(round(avg_lat,4))+"\nThroughput: "+str(round(avg_qps,4)))
         return avg_lat,avg_qps
@@ -126,14 +147,17 @@ class MysqlExecutor(Executor):
     def consumer_process(self,task_key):
         query = task_key.split('~#~')[1]
         if query:
-            start = time.time()
-            result=self.execute_query_with_pool(query)
-            end = time.time()
-            interval = end - start
+            success=False
+            while not success:
+                start = time.time()
+                result=self.execute_query_with_pool(query)
+                end = time.time()
+                interval = end - start
 
-            if result:
+                success=result
                 self.lock.acquire()
-                self.success_query+=1
+                if result:
+                    self.success_query+=1
                 self.total_latency+=interval
                 self.lock.release()
 
@@ -180,12 +204,17 @@ class MysqlExecutor(Executor):
         return result
 
     def restart_db(self,remote_port,remote_user,remote_password,remote_ip='10.20.5.110'):
-        ssh=paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname=remote_ip,port=int(remote_port),username=remote_user,password=remote_password)
-        stdin,stdout,stderr=ssh.exec_command("sudo -S service mysql restart")
-        time.sleep(0.1)
-        stdin.write(remote_password+"\n")
-        stdin.flush()
-        ssh.close()
-        time.sleep(2)
+        # try:
+        #     ssh=paramiko.SSHClient()
+        #     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        #     ssh.connect(hostname=remote_ip,port=int(remote_port),username=remote_user,password=remote_password)
+        #     stdin,stdout,stderr=ssh.exec_command("sudo -S service mysql restart")
+        #     time.sleep(0.1)
+        #     stdin.write(remote_password+"\n")
+        #     stdin.flush()
+        #     ssh.close()
+        #     time.sleep(5)
+        # except:
+        #     pass
+        os.system("net stop mysql")
+        os.system("net start mysql")

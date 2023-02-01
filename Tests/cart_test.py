@@ -7,10 +7,10 @@ import pickle
 
 if __name__=='__main__':
     WORKLOAD_PATH="../Workload/TestWorkload/job_mysql.bin"
-    MODEL_SAVE_FILE="../KnobSelection/model/cart_0905_mysql_2.pkl"
+    MODEL_SAVE_FILE="../KnobSelection/model/cart_0908_mysql.pkl"
     NUM_TRAIL=5
     LHS_N=10
-    N_ESTIMATOR=100
+    N_ESTIMATOR=50
     MAX_DEPTH=3
 
     # f=open(WORKLOAD_PATH,"r")
@@ -65,7 +65,7 @@ if __name__=='__main__':
     pickle.dump(model,f)
     f.close()
     db.reset_restart_knob(knob_names)
-    f=open("../log/cart_result_0905_mysql_server.log",'w')
+    f=open("../log/cart_result_0908_mysql.log",'w')
     f.write(str(model.get_top_rank()))
     f.write("\n")
     f.write("Training time:"+str(end_time-start_time)+"\n")
