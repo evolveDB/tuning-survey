@@ -69,4 +69,3 @@ Note *M* denotes the manually selected knobs.
 (3) innodb_buffer_pool_instances
 
 (4) query_cache_type & query_cache_size
-
