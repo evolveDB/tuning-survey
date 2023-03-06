@@ -29,6 +29,5 @@ if __name__ == "__main__":
     model = DDS_RBS_Algorithm(NUM_ITERATION, LHS_N, logger)
 
     model.default_latency_throughput(db, [])
-    model.default_latency_throughput(db, [])
-    model.train(db, [])
+    model.train(db)
     logger.close()

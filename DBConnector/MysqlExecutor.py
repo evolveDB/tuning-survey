@@ -220,7 +220,7 @@ class MysqlExecutor(Executor):
         result = cur.fetchall()
         cur.close()
         conn.close()
-        return int(float(result[0][1]))
+        return result[0][1]
 
     def get_max_thread_num(self):
         return 800
