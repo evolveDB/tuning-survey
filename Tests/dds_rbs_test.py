@@ -22,12 +22,13 @@ if __name__ == "__main__":
     # f.close()
     # print('workload:', len(workload))
 
+    print('knob_config:', knob_config)
     logger = open("../log/dds_rbs_order_mysql.log", 'w+')
     db = MysqlExecutor(ip=db_config["host"], port=db_config["port"], user=db_config["user"],
                        password=db_config["password"], database=db_config["dbname"], remote_user=remote_config["user"],
                        remote_port=remote_config["port"], remote_password=remote_config["password"])
     model = DDS_RBS_Algorithm(NUM_ITERATION, LHS_N, logger)
 
-    model.default_latency_throughput(db, [])
+    model.default_latency_throughput(db)
     model.train(db)
     logger.close()

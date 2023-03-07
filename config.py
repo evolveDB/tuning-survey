@@ -29,7 +29,7 @@ cfp.read("../my_config.ini", encoding="utf-8")
 config_dict = cfp.read_dict()
 db_config = config_dict["database"]
 remote_config = config_dict["remote-access"]
-knob_config = config_dict["Non-restart Knobs"]
+knob_config = config_dict["restart Knobs"]
 for key in knob_config:
     knob_config[key] = json.loads(str(knob_config[key]).replace("\'", "\""))
 

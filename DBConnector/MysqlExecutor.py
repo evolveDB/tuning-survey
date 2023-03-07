@@ -63,11 +63,7 @@ class MysqlExecutor(Executor):
                 "len(knob_name) should be equal to len(knob_value)")
         for i in range(len(knob_name)):
             item_name = str(knob_name[i])
-            if knob_type is not None and knob_type[i] == 'float':
-                item_value = str(knob_value[i])
-            else:
-                item_value = str(int(knob_value[i]))
-
+            item_value = str(knob_value[i])
             stdout, stderr = self.ssh_exec_command(
                 'sudo -S ' + "sed -i -E 's/^#?({} = )\\S+/{} = {}/' /etc/my.cnf".format(
                     item_name, item_name, item_value))

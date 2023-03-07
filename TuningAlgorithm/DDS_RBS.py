@@ -16,7 +16,7 @@ class DDS_RBS_Algorithm():
         else:
             self.logger = sys.stdout
 
-    def default_latency_throughput(self, db_connector: Executor, workload: list, selected_knob_config=knob_config):
+    def default_latency_throughput(self, db_connector: Executor, selected_knob_config=knob_config):
         knob_names = list(selected_knob_config.keys())
         knob_value = []
         for knob_name in knob_names:
@@ -76,7 +76,8 @@ class DDS_RBS_Algorithm():
                         else:
                             knob_value.append(sample[j][i])
                     knob_value_record.append(knob_value)
-                    db_connector.change_conf_konb(int_knob_names, knob_value, knob_type)
+                    knob_names = int_knob_names + str_knob_names
+                    db_connector.change_conf_konb(knob_names, knob_value, knob_type)
                     db_connector.restart_db()
                     self.logger.write("Change Knob: " + str(knob_value) + "\n")
                     self.logger.flush()
