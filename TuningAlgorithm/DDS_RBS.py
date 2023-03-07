@@ -28,11 +28,11 @@ class DDS_RBS_Algorithm():
 
     def train(self, db_connector: Executor, selected_knob_config=knob_config):
         int_knob_names = list(filter(lambda x: selected_knob_config[x].get('type', 'int') == 'int', selected_knob_config.keys()))
-        str_knob_names = list(filter(lambda x: selected_knob_config[x].get('type', 'int') == 'string', selected_knob_config.keys()))
+        list_knob_names = list(filter(lambda x: selected_knob_config[x].get('type', 'int') == 'list', selected_knob_config.keys()))
         knob_info = db_connector.get_knob_min_max(int_knob_names)
         int_knob_names, knob_min, knob_max, _, knob_type, knob_length = modifyKnobConfig(knob_info, selected_knob_config)
         str_knob_values = []
-        for str_knob in str_knob_names:
+        for str_knob in list_knob_names:
             str_knob_values.append(selected_knob_config[str_knob].get('values', []))
         global_bsf = None  # list (knob_values:list,latency:float)
         for ite in range(self.T):
@@ -57,7 +57,7 @@ class DDS_RBS_Algorithm():
                     sample.append(sample_list)
                     current_granularity.append(knob_length[i])
 
-                for i in range(len(str_knob_names)):
+                for i in range(len(list_knob_names)):
                     sample_list = []
                     knob_values = str_knob_values[i]
                     for r in range(self.N):
@@ -69,14 +69,14 @@ class DDS_RBS_Algorithm():
                 knob_value_record = []
                 for i in range(self.N):
                     knob_value = []
-                    for j in range(len(int_knob_names) + len(str_knob_names)):
+                    for j in range(len(int_knob_names) + len(list_knob_names)):
                         if j < len(int_knob_names):
                             knob_value.append(
                                 max(int(knob_min[j]), int(current_min[j]) + int(current_granularity[j]) * sample[j][i]))
                         else:
                             knob_value.append(sample[j][i])
                     knob_value_record.append(knob_value)
-                    knob_names = int_knob_names + str_knob_names
+                    knob_names = int_knob_names + list_knob_names
                     db_connector.change_conf_konb(knob_names, knob_value, knob_type)
                     db_connector.restart_db()
                     self.logger.write("Change Knob: " + str(knob_value) + "\n")
