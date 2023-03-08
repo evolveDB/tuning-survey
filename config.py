@@ -41,10 +41,12 @@ non_restart_knob_config = config_dict["Non-restart Knobs"]
 restart_knob_config = config_dict["restart Knobs"]
 
 for key in non_restart_knob_config:
-    non_restart_knob_config[key] = json.loads(str(non_restart_knob_config[key]).replace("\'", "\""))
+    non_restart_knob_config[key] = json.loads(
+        str(non_restart_knob_config[key]).replace("\'", "\""))
 
 for key in restart_knob_config:
-    restart_knob_config[key] = json.loads(str(restart_knob_config[key]).replace("\'", "\""))
+    restart_knob_config[key] = json.loads(
+        str(restart_knob_config[key]).replace("\'", "\""))
 
 knob_config = {}
 knob_config.update(non_restart_knob_config)

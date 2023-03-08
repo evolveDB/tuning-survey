@@ -35,10 +35,10 @@ class MysqlExecutor(Executor):
         self.success_queries = []
 
     def _get_connection(self, database):
-        conn=None
-        flag=True
+        conn = None
+        flag = True
         while flag:
-            flag=False
+            flag = False
             try:
                 conn = pymysql.connect(
                     host=self.ip,
@@ -46,8 +46,8 @@ class MysqlExecutor(Executor):
                     password=self.password,
                     database=database,
                     port=self.port)
-            except:
-                flag=True
+            except BaseException:
+                flag = True
         return conn
 
     def change_knob(self, knob_name, knob_value):
@@ -59,7 +59,7 @@ class MysqlExecutor(Executor):
         restart_knob_names = []
         restart_knob_values = []
 
-        for i in range(len(knob_name)-1):
+        for i in range(len(knob_name) - 1):
             if knob_name[i] in non_restart_knob_config_names:
                 non_restart_knob_names.append(knob_name[i])
                 non_restart_knob_values.append(knob_value[i])
@@ -72,7 +72,8 @@ class MysqlExecutor(Executor):
             self.restart_db()
 
         if len(non_restart_knob_names) > 0:
-            self._change_non_restart_knob(non_restart_knob_names, non_restart_knob_values)
+            self._change_non_restart_knob(
+                non_restart_knob_names, non_restart_knob_values)
 
     def _change_non_restart_knob(self, knob_name, knob_value):
         if len(knob_name) != len(knob_value):
@@ -112,7 +113,6 @@ class MysqlExecutor(Executor):
         cur.close()
         conn.commit()
         conn.close()
-
 
     def reset_restart_knob(self, knob_name: list):
         conn = self._get_connection(self.database)
@@ -287,7 +287,8 @@ class MysqlExecutor(Executor):
     def restart_db(self):
         print('数据库重启中')
         time.sleep(30)
-        stdout_readlines, stderr_read = self.ssh_exec_command('sudo systemctl restart mysqld.service')
+        stdout_readlines, stderr_read = self.ssh_exec_command(
+            'sudo systemctl restart mysqld.service')
         print("restart_db_stderr:", stderr_read)
         print("restart_db_stdout:", stdout_readlines)
         print('数据库重启成功')
