@@ -234,7 +234,7 @@ class ActorCritic:
         return reward
 
 class DDPG_Algorithm():
-    def __init__(self,db_connector:Executor,feature_selector:FeatureSelector,workload:list,selected_knob_config=nonrestart_knob_config,latency_weight=1,throughput_weight=9,logger=None) -> None:
+    def __init__(self,db_connector:Executor,feature_selector:FeatureSelector,workload:list,selected_knob_config=non_restart_knob_config,latency_weight=1,throughput_weight=9,logger=None) -> None:
         self.db=db_connector
         self.workload=workload
         self.feature_selector=feature_selector
@@ -274,7 +274,7 @@ class DDPG_Algorithm():
         self.knob_granularity=np.array(self.knob_granularity)
 
         self.action_num=len(self.knob_names)
-        self.nonrestart_knob_num=len(nonrestart_knob_config)
+        self.nonrestart_knob_num=len(non_restart_knob_config)
         db_state=self.db.get_db_state()
         if self.feature_selector is None:
             self.state_num=len(db_state)

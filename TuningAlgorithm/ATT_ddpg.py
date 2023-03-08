@@ -354,7 +354,7 @@ class ActorCritic:
         return reward
 
 class ATT_DDPG():
-    def __init__(self,db_connector:Executor,feature_selector:FeatureSelector,workload:list,workload_embed_dim=38,selected_knob_config=nonrestart_knob_config,latency_weight=9,throughput_weight=1,mu=0.5,rho=0.5,logger=None) -> None:
+    def __init__(self,db_connector:Executor,feature_selector:FeatureSelector,workload:list,workload_embed_dim=38,selected_knob_config=non_restart_knob_config,latency_weight=9,throughput_weight=1,mu=0.5,rho=0.5,logger=None) -> None:
         self.db=db_connector
         self.workload=workload
         self.feature_selector=feature_selector

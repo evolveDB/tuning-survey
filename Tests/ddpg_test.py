@@ -40,7 +40,7 @@ if __name__ == '__main__':
         password=db_config["password"],
         database=db_config["dbname"])
     logger.write("Initialize:\n")
-    knob_config = nonrestart_knob_config.copy()
+    knob_config = non_restart_knob_config.copy()
     knob_names = list(knob_config.keys())
     db.reset_knob(knob_names)
     logger.write("Reset non restart:\n")

@@ -40,7 +40,7 @@ class GPR():
         self.likelihood=gpytorch.likelihoods.GaussianLikelihood()
         self.model=None
     
-    def train(self,db:Executor,workload:list,train_epoch=100,lr=0.01,batch_size=32,save_interval=20,save_path="../TuningAlgorithm/model/gpr/",knob_config=nonrestart_knob_config,train_data_size=100):
+    def train(self,db:Executor,workload:list,train_epoch=100,lr=0.01,batch_size=32,save_interval=20,save_path="../TuningAlgorithm/model/gpr/",knob_config=non_restart_knob_config,train_data_size=100):
         self.train_data_size=train_data_size
         knob_names=list(knob_config.keys())
         knob_info=db.get_knob_min_max(knob_names)

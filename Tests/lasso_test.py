@@ -16,7 +16,7 @@ if __name__=='__main__':
     workload=pickle.load(f)
     f.close()
     start_time=time.time()
-    knob_config=nonrestart_knob_config
+    knob_config=non_restart_knob_config
     knob_config.update(restart_knob_config)
     scalered_knob_data=[]
     knob_data=[]
