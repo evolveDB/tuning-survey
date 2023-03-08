@@ -5,3 +5,4 @@ PyMySQL==0.10.1
 scikit_learn
 torch
 paramiko
+gpytorch

@@ -3,7 +3,6 @@ import sys
 import torch
 import torch.nn as nn
 from torch.optim import Adam
-import numpy as np
 import time
 from collections import deque
 from config import *

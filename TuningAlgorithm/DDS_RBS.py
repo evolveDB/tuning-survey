@@ -1,5 +1,4 @@
 import sys
-
 sys.path.append("../")
 from DBConnector.BaseExecutor import Executor
 from config import *
