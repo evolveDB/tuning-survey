@@ -1,4 +1,3 @@
-from unittest import result
 import pymysql
 from dbutils.pooled_db import PooledDB
 from .BaseExecutor import *
@@ -6,6 +5,7 @@ import queue
 import time
 import paramiko
 import os
+from config import *
 
 
 class MysqlExecutor(Executor):
@@ -34,7 +34,31 @@ class MysqlExecutor(Executor):
         self.success_latencies = []
         self.success_queries = []
 
-    def change_knob(self, knob_name, knob_value, knob_type: None):
+    def change_knob(self, knob_name, knob_value):
+        if len(knob_name) != len(knob_value):
+            raise Exception(
+                "len(knob_name) should be equal to len(knob_value)")
+        non_restart_knob_names = []
+        non_restart_knob_values = []
+        restart_knob_names = []
+        restart_knob_values = []
+
+        for i in range(len(knob_name)-1):
+            if knob_name[i] in non_restart_knob_config_names:
+                non_restart_knob_names.append(knob_name[i])
+                non_restart_knob_values.append(knob_value[i])
+            elif knob_name[i] in restart_knob_config_names:
+                restart_knob_names.append(knob_name[i])
+                restart_knob_values.append(knob_value[i])
+
+        if len(restart_knob_names) > 0:
+            self._change_restart_knob(restart_knob_names, restart_knob_values)
+            self.restart_db()
+
+        if len(non_restart_knob_names) > 0:
+            self._change_non_restart_knob(non_restart_knob_names, non_restart_knob_values)
+
+    def _change_non_restart_knob(self, knob_name, knob_value):
         if len(knob_name) != len(knob_value):
             raise Exception(
                 "len(knob_name) should be equal to len(knob_value)")
@@ -46,18 +70,14 @@ class MysqlExecutor(Executor):
             port=self.port)
         cur = conn.cursor()
         for i in range(len(knob_name)):
-            if knob_type is not None and knob_type[i] == 'float':
-                sql = "set global " + \
-                    str(knob_name[i]) + "=" + str(knob_value[i]) + ";"
-            else:
-                sql = "set global " + \
-                    str(knob_name[i]) + "=" + str(int(knob_value[i])) + ";"
+            sql = "set global " + \
+                  str(knob_name[i]) + "=" + str(int(knob_value[i])) + ";"
             cur.execute(sql)
         cur.close()
         conn.commit()
         conn.close()
 
-    def change_conf_konb(self, knob_name, knob_value, knob_type: None):
+    def _change_restart_knob(self, knob_name, knob_value):
         if len(knob_name) != len(knob_value):
             raise Exception(
                 "len(knob_name) should be equal to len(knob_value)")
@@ -67,9 +87,8 @@ class MysqlExecutor(Executor):
             stdout, stderr = self.ssh_exec_command(
                 'sudo -S ' + "sed -i -E 's/^#?({} = )\\S+/{} = {}/' /etc/my.cnf".format(
                     item_name, item_name, item_value))
-
-            print("change_conf_konb_stderr:", stderr)
-            print("change_conf_konb_stdout:", stdout)
+            print("change_restart_knob_konb_stderr:", stderr)
+            print("change_restart_knob_konb_stdout:", stdout)
 
     def reset_knob(self, knob_name: list):
         conn = pymysql.connect(

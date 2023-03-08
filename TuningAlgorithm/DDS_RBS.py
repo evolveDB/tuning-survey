@@ -77,8 +77,7 @@ class DDS_RBS_Algorithm():
                             knob_value.append(sample[j][i])
                     knob_value_record.append(knob_value)
                     knob_names = int_knob_names + list_knob_names
-                    db_connector.change_conf_konb(knob_names, knob_value, knob_type)
-                    db_connector.restart_db()
+                    db_connector.change_knob(knob_names, knob_value)
                     self.logger.write("Change Knob: " + str(knob_value) + "\n")
                     self.logger.flush()
                     latency, throughput = db_connector.run_tpcc()

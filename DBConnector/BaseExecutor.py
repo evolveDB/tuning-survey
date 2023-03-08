@@ -67,7 +67,3 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def restart_db(self):
         pass
-
-    @abc.abstractmethod
-    def change_conf_konb(self, knob_name, knob_value, knob_type: None):
-        pass

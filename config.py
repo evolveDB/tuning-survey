@@ -22,16 +22,36 @@ class Logger():
 
 
 db_config = None
-knob_config = None
 remote_config = None
+non_restart_knob_config = None
+restart_knob_config = None
+knob_config = None
+non_restart_knob_config_names = None
+restart_knob_config_names = None
+
 cfp = DictParser()
 cfp.read("../my_config.ini", encoding="utf-8")
 config_dict = cfp.read_dict()
+
+
 db_config = config_dict["database"]
 remote_config = config_dict["remote-access"]
-knob_config = config_dict["restart Knobs"]
-for key in knob_config:
-    knob_config[key] = json.loads(str(knob_config[key]).replace("\'", "\""))
+
+non_restart_knob_config = config_dict["Non-restart Knobs"]
+restart_knob_config = config_dict["restart Knobs"]
+
+for key in non_restart_knob_config:
+    non_restart_knob_config[key] = json.loads(str(non_restart_knob_config[key]).replace("\'", "\""))
+
+for key in restart_knob_config:
+    restart_knob_config[key] = json.loads(str(restart_knob_config[key]).replace("\'", "\""))
+
+knob_config = {}
+knob_config.update(non_restart_knob_config)
+knob_config.update(restart_knob_config)
+
+non_restart_knob_config_names = list(non_restart_knob_config.keys())
+restart_knob_config_names = list(restart_knob_config.keys())
 
 
 def modifyKnobConfig(knob_info, user_define_config):
