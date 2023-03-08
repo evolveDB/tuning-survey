@@ -14,12 +14,11 @@ class Producer(threading.Thread):
         for index, query in enumerate(self.workload):
             self.__queue.put(str(index) + "~#~" + query)
 
-
 class Consumer(threading.Thread):
-    def __init__(self, name, queue_ins, method):
+    def __init__(self, name, queue_ins,method):
         self.__name = name
         self.__queue = queue_ins
-        self.__method = method
+        self.__method=method
         super(Consumer, self).__init__()
 
     def run(self):
@@ -30,22 +29,29 @@ class Consumer(threading.Thread):
             finally:
                 self.__queue.task_done()
 
-
 class Executor(metaclass=abc.ABCMeta):
 
     def __init__(self) -> None:
         pass
 
     @abc.abstractmethod
-    def change_knob(self, knob_name: list, knob_value: list, knob_type: list):
+    def change_knob(self,knob_name:list,knob_value:list,knob_type:list):
         pass
 
     @abc.abstractmethod
-    def reset_knob(self, knob_name: list):
+    def change_restart_knob(self,knob_name,knob_value,knob_type):
         pass
 
     @abc.abstractmethod
-    def run_job(self, thread_num, workload: list):
+    def reset_knob(self,knob_name:list):
+        pass
+
+    @abc.abstractmethod
+    def reset_restart_knob(self,knob_name:list):
+        pass
+
+    @abc.abstractmethod
+    def run_job(self,thread_num,workload:list):
         pass
 
     @abc.abstractmethod
@@ -53,17 +59,15 @@ class Executor(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_db_knob_value(self):
-        pass
-
-    @abc.abstractmethod
     def get_max_thread_num(self):
         pass
 
     @abc.abstractmethod
-    def get_knob_min_max(self, knob_names) -> dict:
+    def get_knob_min_max(self,knob_names)->dict:
         pass
 
     @abc.abstractmethod
-    def restart_db(self):
+    def restart_db(self,remote_port,remote_user,remote_password):
         pass
+
+    

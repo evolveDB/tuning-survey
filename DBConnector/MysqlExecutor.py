@@ -34,6 +34,22 @@ class MysqlExecutor(Executor):
         self.success_latencies = []
         self.success_queries = []
 
+    def _get_connection(self, database):
+        conn=None
+        flag=True
+        while flag:
+            flag=False
+            try:
+                conn = pymysql.connect(
+                    host=self.ip,
+                    user=self.user,
+                    password=self.password,
+                    database=database,
+                    port=self.port)
+            except:
+                flag=True
+        return conn
+
     def change_knob(self, knob_name, knob_value):
         if len(knob_name) != len(knob_value):
             raise Exception(
@@ -62,12 +78,7 @@ class MysqlExecutor(Executor):
         if len(knob_name) != len(knob_value):
             raise Exception(
                 "len(knob_name) should be equal to len(knob_value)")
-        conn = pymysql.connect(
-            host=self.ip,
-            user=self.user,
-            password=self.password,
-            database=self.database,
-            port=self.port)
+        conn = self._get_connection(self.database)
         cur = conn.cursor()
         for i in range(len(knob_name)):
             sql = "set global " + \
@@ -91,18 +102,24 @@ class MysqlExecutor(Executor):
             print("change_restart_knob_konb_stdout:", stdout)
 
     def reset_knob(self, knob_name: list):
-        conn = pymysql.connect(
-            host=self.ip,
-            user=self.user,
-            password=self.password,
-            database=self.database,
-            port=self.port)
+        conn = self._get_connection(self.database)
         cur = conn.cursor()
         for knob in knob_name:
             sql = 'set @@SESSION.' + str(knob) + '=DEFAULT;'
             cur.execute(sql)
             sql = 'set @@GLOBAL.' + knob + '=DEFAULT;'
             cur.execute(sql)
+        cur.close()
+        conn.commit()
+        conn.close()
+
+
+    def reset_restart_knob(self, knob_name: list):
+        conn = self._get_connection(self.database)
+        cur = conn.cursor()
+        for i in range(len(knob_name)):
+            sql = "set persist " + str(knob_name[i]) + "=DEFAULT;"
+        cur.execute(sql)
         cur.close()
         conn.commit()
         conn.close()
@@ -206,12 +223,7 @@ class MysqlExecutor(Executor):
 
     def get_db_state(self):
         state_list = []
-        conn = pymysql.connect(
-            host=self.ip,
-            user=self.user,
-            password=self.password,
-            database=self.database,
-            port=self.port)
+        conn = self._get_connection(self.database)
         cur = conn.cursor()
         sql = "SELECT count FROM INFORMATION_SCHEMA.INNODB_METRICS where status='enabled'"
         cur.execute(sql)
@@ -223,12 +235,7 @@ class MysqlExecutor(Executor):
         return state_list
 
     def get_db_knob_value(self, knob_name):
-        conn = pymysql.connect(
-            host=self.ip,
-            user=self.user,
-            password=self.password,
-            database=self.database,
-            port=self.port)
+        conn = self._get_connection(self.database)
         cur = conn.cursor()
         sql = "show variables like '{}';".format(knob_name)
         cur.execute(sql)
@@ -244,12 +251,7 @@ class MysqlExecutor(Executor):
     def get_knob_min_max(self, knob_names) -> dict:
         result = {}
         knob_tuple = str(tuple(knob_names))
-        conn = pymysql.connect(
-            host=self.ip,
-            user=self.user,
-            password=self.password,
-            database="performance_schema",
-            port=self.port)
+        conn = self._get_connection("performance_schema")
         cur = conn.cursor()
         sql = "select VARIABLE_NAME, MIN_VALUE, MAX_VALUE from variables_info where VARIABLE_NAME in " + knob_tuple
         cur.execute(sql)

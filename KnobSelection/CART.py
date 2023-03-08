@@ -32,7 +32,7 @@ class CART():
                 knob_value=[]
                 for j in range(len(knob_names)):
                     knob_value.append(knob_min[j]+knob_granularity[j]*sample[j][i])
-                db.change_knob(knob_names,knob_value,knob_type)
+                db.change_restart_knob(knob_names,knob_value,knob_type)
                 print("Change Knob: "+str(knob_value))
                 db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
                 thread_num=db.get_max_thread_num()

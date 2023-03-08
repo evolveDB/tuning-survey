@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam,SGD
 from torch.utils.data import Dataset,DataLoader
+from torch.autograd import Variable,grad
 import time
 
 class Net(nn.Module):
@@ -21,10 +22,13 @@ class Net(nn.Module):
         self.fc3=nn.Linear(64,output_dim)
     
     def forward(self,feature):
-        a=F.relu(self.fc1(feature))
+        a=self.fc1(feature)
+        a=F.relu(a)
         a=self.dropout(a)
-        a=F.relu(self.fc2(a))
-        a=F.relu(self.fc3(a))
+        a=self.fc2(a)
+        a=F.relu(a)
+        a=self.fc3(a)
+        a=F.relu(a)
         return a
 
 class TrainDataSet(Dataset):
@@ -46,7 +50,7 @@ class DNN_Tune():
         self.selected_knob_num=selected_knob_num
         self.dnn_model=None
 
-    def train(self,db:Executor,workload:list,train_epoch=100,lr=0.01,batch_size=32):
+    def train(self,db:Executor,workload:list,train_epoch=100,lr=0.01,batch_size=32,save_interval=20,save_path="../TuningAlgorithm/model/dnn/",knob_config=nonrestart_knob_config):
         knob_names=list(knob_config.keys())
         knob_info=db.get_knob_min_max(knob_names)
         knob_names,knob_min,knob_max,knob_granularity,knob_type=modifyKnobConfig(knob_info,knob_config)
@@ -64,7 +68,7 @@ class DNN_Tune():
             scalered_knob_data.append(action)
             knob_value=np.round((knob_max-knob_min)/knob_granularity*action)*knob_granularity+knob_min
             # print(knob_value)
-            db.change_knob(knob_names,knob_value,knob_type)
+            db.change_restart_knob(knob_names,knob_value,knob_type)
             db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
             thread_num=db.get_max_thread_num()
             before_state=db.get_db_state()
@@ -81,13 +85,12 @@ class DNN_Tune():
             # print()
 
         print("Finish collecting data")
-        db.reset_knob(knob_names)
+        db.reset_restart_knob(knob_names)
         self.feature_selector.fit(metric_data,kmeans_k=self.feature_num)
         new_metric_data=[]
         for metric in metric_data:
             new_metric_data.append(self.feature_selector.transform(metric))
         self.knob_selector.fit(knob_data,new_metric_data)
-
         ranked_knob_names=None
         new_knob_value=[]
         for knob_value in scalered_knob_data:
@@ -99,7 +102,6 @@ class DNN_Tune():
         _,knob_granularity=self.knob_selector.rank_knob(knob_granularity)
         _,knob_type=self.knob_selector.rank_knob(knob_type)
 
-
         # self.latency_scaler=StandardScaler()
         # latency_data=self.latency_scaler.fit_transform(latency_data)
 
@@ -110,13 +112,17 @@ class DNN_Tune():
         dataloader=DataLoader(dataset,batch_size=batch_size,shuffle=True)
 
         for epoch in range(train_epoch):
+            epoch_loss=0
             for batch_idx,data in enumerate(dataloader):
                 optimizer.zero_grad()
                 x,y=data
                 y_pred=self.dnn_model(x)
                 loss=loss_function(y,y_pred)
                 loss.backward()
+                epoch_loss+=loss.item()
                 optimizer.step()
+            print("Epoch "+str(epoch)+", Loss: "+str(epoch_loss))
+            
         print("Finish Training DNN")
 
         self.knob_names=ranked_knob_names
@@ -124,14 +130,19 @@ class DNN_Tune():
         self.knob_max=knob_max[:self.selected_knob_num]
         self.knob_granularity=knob_granularity[:self.selected_knob_num]
         self.knob_type=knob_type[:self.selected_knob_num]
+        self.scalered_knob_data=scalered_knob_data
+        self.knob_data=knob_data
+        self.metric_data=new_metric_data
+        self.latency_data=latency_data
 
     def recommand(self,x_start=None,recommand_epoch=100,lr=0.05,explore=False):
         if x_start is None:
-            x_start=torch.ones(size=(1,len(self.selected_knob_num)))
+            x_start=torch.ones(size=(1,len(self.knob_names)))
             for i in range(len(x_start[0])):
                 x_start[0][i]=x_start[0][i]/2
+        x_start=Variable(x_start,requires_grad=True)
         x_start=nn.Parameter(x_start,requires_grad=True)
-        x_optimizer=Adam([x_start],lr)
+        x_optimizer=SGD([x_start],lr)
         loss_function=nn.MSELoss()
         if explore:
             with torch.no_grad():
@@ -141,14 +152,15 @@ class DNN_Tune():
         for epoch in range(recommand_epoch):
             x_optimizer.zero_grad()
             y_pred=self.dnn_model(x_start)
-            results.append([x_start[0],y_pred])
-            target_y=torch.zeros(y_pred.shape)
-            loss=loss_function(y_pred,target_y)
-            loss.backward(retain_graph=True)
+            print([x_start,y_pred])
+            results.append([x_start.clone(),y_pred])
+            # target_y=torch.zeros(y_pred.shape)
+            # loss=loss_function(y_pred,target_y)
+            y_pred.backward(retain_graph=True)
             x_optimizer.step()
 
         for i in range(len(results)):
-            results[i][0]=results[i][0].detach().numpy()
+            results[i][0]=results[i][0][0].detach().numpy()
             results[i][1]=results[i][1].detach().numpy()
             res_knob_value=[]
             for j in range(len(results[i][0])):
@@ -158,32 +170,71 @@ class DNN_Tune():
         
         return results
 
-    def test_dnn(self):
-        input_value=torch.randn([20,5]).numpy().tolist()
-        output_value=torch.randint(low=1,high=2,size=(20,1)).numpy().tolist()
-        dnn_model=Net(len(input_value[0]),1)
-        optimizer=Adam(dnn_model.parameters(),0.01)
-        dataset=TrainDataSet(input_value,output_value)
-        dataloader=DataLoader(dataset,batch_size=3,shuffle=True)
+    def train(self,db:Executor,workload:list,knob_names,knob_min,knob_max,knob_granularity,knob_type,train_epoch=100,lr=0.01,batch_size=32):
+        knob_data=[]
+        scalered_knob_data=[]
+        metric_data=[]
+        latency_data=[]
+        self.feature_selector=FeatureSelector_FA_Kmeans()
+
+        for i in range(self.train_data_size):
+            # print(i)
+            action=np.random.random(size=len(knob_names))
+            scalered_knob_data.append(action)
+            knob_value=np.round((knob_max-knob_min)/knob_granularity*action)*knob_granularity+knob_min
+            # print(knob_value)
+            db.change_restart_knob(knob_names,knob_value,knob_type)
+            db.restart_db(remote_config["port"],remote_config["user"],remote_config["password"])
+            thread_num=db.get_max_thread_num()
+            before_state=db.get_db_state()
+            l,t=db.run_job(thread_num,workload)
+            # print("Latency: "+str(l))
+            # print("Throughput: "+str(t))
+            time.sleep(0.1)
+            after_state=db.get_db_state()
+            state=np.array(after_state)-np.array(before_state)
+            knob_data.append(knob_value)
+            metric_data.append(state)
+            latency_data.append([l])
+            # print(state)
+            # print()
+
+        print("Finish collecting data")
+        db.reset_restart_knob(knob_names)
+        self.feature_selector.fit(metric_data,kmeans_k=self.feature_num)
+        new_metric_data=[]
+        for metric in metric_data:
+            new_metric_data.append(self.feature_selector.transform(metric))
+
+        # self.latency_scaler=StandardScaler()
+        # latency_data=self.latency_scaler.fit_transform(latency_data)
+
+        self.dnn_model=Net(len(scalered_knob_data[0]),1)
+        optimizer=Adam(self.dnn_model.parameters(),lr)
         loss_function=nn.MSELoss()
-        for epoch in range(10):
-            for batch_id,batch_data in enumerate(dataloader):
-                x,y=batch_data
-                y_pred=dnn_model(x)
+        dataset=TrainDataSet(scalered_knob_data,latency_data)
+        dataloader=DataLoader(dataset,batch_size=batch_size,shuffle=True)
+
+        for epoch in range(train_epoch):
+            epoch_loss=0
+            for batch_idx,data in enumerate(dataloader):
                 optimizer.zero_grad()
+                x,y=data
+                y_pred=self.dnn_model(x)
                 loss=loss_function(y,y_pred)
                 loss.backward()
+                epoch_loss+=loss.item()
                 optimizer.step()
-        x_start=torch.randn([5]).numpy().tolist()
-        x_start=torch.FloatTensor(x_start)
-        x_start=nn.Parameter(x_start,requires_grad=True)
-        x_optimizer=Adam([x_start],0.05)
-        # optimizer.add_param_group({"params":x_start})
-        for epoch in range(100):
-            x_optimizer.zero_grad()
-            y_pred=dnn_model(x_start)
-            print([x_start,y_pred])
-            target=torch.zeros(y_pred.shape)
-            loss=loss_function(y_pred,target)
-            y_pred.backward(retain_graph=True)
-            x_optimizer.step()
+            print("Epoch "+str(epoch)+", Loss: "+str(epoch_loss))
+            
+        print("Finish Training DNN")
+
+        self.knob_names=knob_names
+        self.knob_min=knob_min[:self.selected_knob_num]
+        self.knob_max=knob_max[:self.selected_knob_num]
+        self.knob_granularity=knob_granularity[:self.selected_knob_num]
+        self.knob_type=knob_type[:self.selected_knob_num]
+        self.scalered_knob_data=scalered_knob_data
+        self.knob_data=knob_data
+        self.metric_data=new_metric_data
+        self.latency_data=latency_data
