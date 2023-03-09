@@ -4,7 +4,9 @@
 
 ### Knobs for Postgres 
 
-ottertune;  too many; LlamaTune; 
+OtterTune;  
+Too many knobs to tune;
+LlamaTune
 
 
 
