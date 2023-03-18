@@ -59,7 +59,7 @@ class MysqlExecutor(Executor):
         restart_knob_names = []
         restart_knob_values = []
 
-        for i in range(len(knob_name) - 1):
+        for i in range(len(knob_name)):
             if knob_name[i] in non_restart_knob_config_names:
                 non_restart_knob_names.append(knob_name[i])
                 non_restart_knob_values.append(knob_value[i])
@@ -74,6 +74,9 @@ class MysqlExecutor(Executor):
         if len(non_restart_knob_names) > 0:
             self._change_non_restart_knob(
                 non_restart_knob_names, non_restart_knob_values)
+    
+    def change_restart_knob(self, knob_name, knob_value, knob_type):
+        pass
 
     def _change_non_restart_knob(self, knob_name, knob_value):
         if len(knob_name) != len(knob_value):
@@ -83,7 +86,7 @@ class MysqlExecutor(Executor):
         cur = conn.cursor()
         for i in range(len(knob_name)):
             sql = "set global " + \
-                  str(knob_name[i]) + "=" + str(int(knob_value[i])) + ";"
+                  str(knob_name[i]) + "=" + str(knob_value[i]) + ";"
             cur.execute(sql)
         cur.close()
         conn.commit()
