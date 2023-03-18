@@ -14,7 +14,7 @@ from FeatureSelection.QueryEmbed import *
 from .ddpg import ActorCritic,Actor,Critic
 
 class QTune():
-    def __init__(self,db_connector:Executor,workload:list,selected_knob_config=nonrestart_knob_config,latency_weight=9,throughput_weight=1,logger=None) -> None:
+    def __init__(self,db_connector:Executor,workload:list,selected_knob_config=non_restart_knob_config,latency_weight=9,throughput_weight=1,logger=None) -> None:
         self.db=db_connector
         self.workload=workload
         self.latency_weight=latency_weight

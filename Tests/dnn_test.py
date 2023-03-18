@@ -18,7 +18,7 @@ if __name__=='__main__':
     f.close()
 
     db=PostgresExecutor(ip=db_config["host"],port=db_config["port"],user=db_config["user"],password=db_config["password"],database=db_config["dbname"])
-    knob_config=nonrestart_knob_config
+    knob_config=non_restart_knob_config
     knob_names=list(knob_config.keys())
     db.reset_knob(knob_names)
     knob_config.update(restart_knob_config)
