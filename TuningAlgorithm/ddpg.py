@@ -3,7 +3,6 @@ import sys
 import torch
 import torch.nn as nn
 from torch.optim import Adam
-import numpy as np
 import time
 from collections import deque
 from config import *
@@ -217,7 +216,7 @@ class ActorCritic:
         return reward
 
 class DDPG_Algorithm():
-    def __init__(self,db_connector:Executor,feature_selector:FeatureSelector,workload:list,selected_knob_config=nonrestart_knob_config,latency_weight=9,throughput_weight=1,logger=None) -> None:
+    def __init__(self,db_connector:Executor,feature_selector:FeatureSelector,workload:list,selected_knob_config=non_restart_knob_config,latency_weight=9,throughput_weight=1,logger=None) -> None:
         self.db=db_connector
         self.workload=workload
         self.feature_selector=feature_selector

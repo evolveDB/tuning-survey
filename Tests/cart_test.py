@@ -22,7 +22,7 @@ if __name__=='__main__':
     workload=pickle.load(f)
     f.close()
     start_time=time.time()
-    knob_config=nonrestart_knob_config
+    knob_config=non_restart_knob_config
     knob_config.update(restart_knob_config)
     db=MysqlExecutor(ip=db_config["host"],port=db_config["port"],user=db_config["user"],password=db_config["password"],database=db_config["dbname"])
     knob_names=list(knob_config.keys())

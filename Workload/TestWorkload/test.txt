@@ -1,0 +1,7 @@
+insert into slow_log_202209 select * from slow_log where start_time >= '2022-09-01 00:00:00' and start_time < '2022-10-01 00:00:00';
+insert into slow_log_202209 select * from slow_log where start_time >= '2022-09-01 00:00:00' and start_time < '2022-10-01 00:00:00';
+insert into slow_log_202209 select * from slow_log_bak202209to202212 where start_time >= '2022-09-01 00:00:00' and start_time < '2022-10-01 00:00:00';
+insert into slow_log_bak202209test select * from slow_log where start_time >= '2022-09-01 00:00:00' and start_time < '2022-10-01 00:00:00';
+insert into slow_log_bak202210 select * from slow_log where start_time >= '2022-10-01 00:00:00' and start_time < '2022-11-01 00:00:00';
+insert into slow_log_bak202211 select * from slow_log where start_time >= '2022-11-01 00:00:00' and start_time < '2022-12-01 00:00:00';
+insert into slow_log_bak202212 select * from slow_log where start_time >= '2022-12-01 00:00:00' and start_time < '2023-01-01 00:00:00';
