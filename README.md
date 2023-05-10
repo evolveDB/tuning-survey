@@ -130,6 +130,7 @@ Major improvement/enhancement in future.
 
 ## Citation
 
+```bash
 @article{zhao2023automatic,
   title={Automatic Database Knob Tuning: A Survey},
   author={Zhao, Xinyang and Zhou, Xuanhe and Li, Guoliang},
@@ -137,6 +138,7 @@ Major improvement/enhancement in future.
   year={2023},
   publisher={IEEE}
 }
+```
 
 ## Contributors
 
