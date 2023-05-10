@@ -130,6 +130,14 @@ Major improvement/enhancement in future.
 
 ## Citation
 
+@article{zhao2023automatic,
+  title={Automatic Database Knob Tuning: A Survey},
+  author={Zhao, Xinyang and Zhou, Xuanhe and Li, Guoliang},
+  journal={IEEE Transactions on Knowledge and Data Engineering},
+  year={2023},
+  publisher={IEEE}
+}
+
 ## Contributors
 
 We thank all the contributors to this project, more contributors are welcome!
