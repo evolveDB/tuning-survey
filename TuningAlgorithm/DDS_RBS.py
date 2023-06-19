@@ -20,13 +20,19 @@ class DDS_RBS_Algorithm():
             db_connector: Executor,
             selected_knob_config=knob_config):
         knob_names = list(selected_knob_config.keys())
+        # db_connector.reset_knob(knob_names)
+        # db_connector.reset_restart_knob(knob_names)
+        # db_connector.restart_db()
         knob_value = []
         for knob_name in knob_names:
             knob_value.append(db_connector.get_db_knob_value(knob_name))
+        self.logger.write("Knob name: "+str(knob_names) + '\n')
         self.logger.write("Default Knob: " + str(knob_value) + "\n")
         latency, throughput = db_connector.run_tpcc()
         self.logger.write("Latency: " + str(latency) + "\n")
         self.logger.write("Throughput: " + str(throughput) + "\n\n")
+        self.init_latency = latency
+        self.init_throughput = throughput
 
     def train(self, db_connector: Executor, selected_knob_config=knob_config):
         int_knob_names = list(
@@ -44,6 +50,7 @@ class DDS_RBS_Algorithm():
         knob_info = db_connector.get_knob_min_max(int_knob_names)
         int_knob_names, knob_min, knob_max, _, knob_type, knob_length = modifyKnobConfig(
             knob_info, selected_knob_config)
+        self.logger.write("knob names: "+str(int_knob_names+list_knob_names)+"\n")
         str_knob_values = []
         for str_knob in list_knob_names:
             str_knob_values.append(
@@ -88,8 +95,7 @@ class DDS_RBS_Algorithm():
                     knob_value = []
                     for j in range(len(int_knob_names) + len(list_knob_names)):
                         if j < len(int_knob_names):
-                            knob_value.append(max(int(knob_min[j]), int(
-                                current_min[j]) + int(current_granularity[j]) * sample[j][i]))
+                            knob_value.append(int(current_min[j] + current_granularity[j] * sample[j][i]))
                         else:
                             knob_value.append(sample[j][i])
                     knob_value_record.append(knob_value)
@@ -100,8 +106,7 @@ class DDS_RBS_Algorithm():
                     latency, throughput = db_connector.run_tpcc()
                     self.logger.write("Latency: " + str(latency) + "\n")
                     self.logger.write(
-                        "Throughput: " + str(throughput) + "\n\n")
-                    self.logger.flush()
+                        "Throughput: " + str(throughput) + "\n")
                     result_list.append(latency)
                 bsf_point_idx = np.argmin(result_list)
                 interval_id = []
@@ -110,14 +115,9 @@ class DDS_RBS_Algorithm():
 
                 # check: break the while loop
                 if step_bsf is not None and result_list[bsf_point_idx] >= step_bsf[1]:
-                    self.logger.write(
-                        "Iteration result: latency=" + str(result_list[bsf_point_idx]))
-                    step_bsf = [
-                        knob_value_record[bsf_point_idx],
-                        result_list[bsf_point_idx]]
+                    self.logger.write("Iteration result: latency=" + str(step_bsf[1]) +"\n")
                     if global_bsf is None or step_bsf[1] < global_bsf[1]:
-                        self.logger.write(
-                            "Update global best: latency=" + str(step_bsf[1]))
+                        self.logger.write("Update global best: latency=" + str(step_bsf[1]))
                         global_bsf = step_bsf.copy()
                     self.logger.flush()
                     break

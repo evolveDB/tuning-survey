@@ -6,7 +6,7 @@ import time
 import paramiko
 import os
 from config import *
-
+import pickle
 
 class MysqlExecutor(Executor):
     def __init__(
@@ -31,8 +31,11 @@ class MysqlExecutor(Executor):
         self.total_latency = 0
         self.success_query = 0
         self.lock = threading.Lock()
-        self.success_latencies = []
-        self.success_queries = []
+        # self.success_latencies = []
+        # self.success_queries = []
+        f=open('../Workload/TestWorkload/workload-tpch.bin','rb')
+        self.workload_tpch=pickle.load(f)
+        f.close()
 
     def _get_connection(self, database):
         conn = None
@@ -109,8 +112,6 @@ class MysqlExecutor(Executor):
         conn = self._get_connection(self.database)
         cur = conn.cursor()
         for knob in knob_name:
-            sql = 'set @@SESSION.' + str(knob) + '=DEFAULT;'
-            cur.execute(sql)
             sql = 'set @@GLOBAL.' + knob + '=DEFAULT;'
             cur.execute(sql)
         cur.close()
@@ -164,16 +165,22 @@ class MysqlExecutor(Executor):
         run_time = round(time.time() - start, 1)
         avg_lat = self.total_latency / self.success_query
         avg_qps = self.success_query / (run_time + 1e-5)
-        max_value = 0
-        for i in range(len(self.success_latencies)):
-            if self.success_latencies[i] > max_value:
-                max_value = self.success_latencies[i]
         return avg_lat, avg_qps
 
     def run_tpcc(self):
+        # l,t=self.run_job(22,self.workload_tpch)
+        # print('T: ' + str(t))
+        # print('l: ' + str(l))
+        # print("执行完毕")
+        # return l,t
+
         run_command = './tpcc.lua --mysql-host={} --mysql-password={}  --mysql-user={} --mysql-db={} --time=60' \
                       ' --threads=64 --report-interval=10 --tables=2 --scale=50' \
                       ' --db-driver=mysql run'.format(self.ip, self.password, self.user, self.database)
+        
+        # run_command = 'sysbench --mysql-host={} --mysql-password={}  --mysql-user={} --mysql-db={} --time=60' \
+        #               ' --threads=64 --tables=25 --table_size=1000000 --events=0 ' \
+        #               ' --db-driver=mysql oltp_read_only run'.format(self.ip, self.password, self.user, self.database)
         out = os.popen(run_command)
         latency = 0
         throughput = 0
@@ -205,6 +212,7 @@ class MysqlExecutor(Executor):
         except Exception as error:
             if conn is not None:
                 conn.close()
+            print("wrong sql: "+ sql)
             print("mysql execute: " + str(error))
             return False
 
@@ -220,8 +228,6 @@ class MysqlExecutor(Executor):
                 self.lock.acquire()
                 self.success_query += 1
                 self.total_latency += interval
-                self.success_latencies.append(interval)
-                self.success_queries.append(query)
                 self.lock.release()
 
     def get_db_state(self):
@@ -232,7 +238,7 @@ class MysqlExecutor(Executor):
         cur.execute(sql)
         result = cur.fetchall()
         for s in result:
-            state_list.append(s['count'])
+            state_list.append(s[0])
         cur.close()
         conn.close()
         return state_list

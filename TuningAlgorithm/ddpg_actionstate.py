@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from config import *
 from DBConnector.BaseExecutor import *
 from FeatureSelection.FeatureSelector import *
-
+import random
 
 class Actor(nn.Module):
     def __init__(self, observation_dim, action_dim) -> None:
@@ -108,10 +108,10 @@ class ActorCritic:
         self.memory.append([cur_state, action, reward, new_state])
 
     def sampling(self, batch_size):
-        indices = np.random.choice(
-            len(self.memory) - 1, size=batch_size - 1).tolist()
-        tmp = np.array(list(self.memory))
-        return tmp[indices]
+        tmp=self.memory.pop()
+        r=random.choices(self.memory, k=batch_size - 1)
+        self.memory.append(tmp)
+        return r
 
     def set_train_mode(self):
         self.actor_model = self.actor_model.train()
@@ -155,7 +155,7 @@ class ActorCritic:
             return
         self.set_train_mode()
         samples = self.sampling(self.batch_size)
-        samples = np.append(samples, [self.memory[-1]], axis=0)
+        samples.append(self.memory[-1])
 
         a_layers = self.target_actor_model.named_children()
         c_layers = self.target_critic_model.named_children()
@@ -206,12 +206,6 @@ class ActorCritic:
         action_sample_input = torch.FloatTensor(
             np.array([s[1] for s in samples]))
         rewards = torch.FloatTensor(np.array([s[2] for s in samples]))
-
-        # if torch.cuda.is_available():
-        #     current_state_sample.cuda()
-        #     next_state_sample.cuda()
-        #     action_sample_input.cuda()
-        #     rewards.cuda()
 
         # Train actor
         a = self.actor_model(current_state_sample, action_sample_input)
@@ -314,6 +308,7 @@ class DDPG_Algorithm():
         self.knob_min = np.array(self.knob_min)
         self.knob_max = np.array(self.knob_max)
         self.knob_granularity = np.array(self.knob_granularity)
+        self.logger.write("knob name: " + str(self.knob_names) + "\n")
 
         self.action_num = len(self.knob_names)
         self.nonrestart_knob_num = len(non_restart_knob_config)
@@ -325,13 +320,9 @@ class DDPG_Algorithm():
         self.model = ActorCritic(self.state_num, self.action_num)
 
     def run_workload(self):
-        self.db.restart_db(
-            remote_config["port"],
-            remote_config["user"],
-            remote_config["password"])
-        thread_num = self.db.get_max_thread_num()
+        # self.db.restart_db()
         db_state = self.db.get_db_state()
-        latency, throughput = self.db.run_job(thread_num, self.workload)
+        latency, throughput = self.db.run_tpcc()
         time.sleep(0.2)
         after_db_state = self.db.get_db_state()
         new_state = np.array(after_db_state) - np.array(db_state)
@@ -353,12 +344,9 @@ class DDPG_Algorithm():
         # self.db.change_knob(self.knob_names[:self.nonrestart_knob_num], knob_value[:self.nonrestart_knob_num], self.knob_type[:self.nonrestart_knob_num])
         # if self.nonrestart_knob_num<self.action_num:
         # self.db.change_restart_knob(self.knob_names[self.nonrestart_knob_num:],knob_value[self.nonrestart_knob_num:],self.knob_type[self.nonrestart_knob_num:])
-        self.db.change_restart_knob(
-            self.knob_names, knob_value, self.knob_type)
-        self.db.restart_db(
-            remote_config["port"],
-            remote_config["user"],
-            remote_config["password"])
+        tmp = [int(x) for x in knob_value]
+        self.db.change_knob(self.knob_names, tmp)
+
 
     def train(
             self,
@@ -371,11 +359,8 @@ class DDPG_Algorithm():
         self.data = []
         # self.db.reset_knob(self.knob_names[:self.nonrestart_knob_num])
         # if self.nonrestart_knob_num<self.action_num:
-        self.db.reset_restart_knob(self.knob_names)
-        self.db.restart_db(
-            remote_config["port"],
-            remote_config["user"],
-            remote_config["password"])
+        # self.db.reset_restart_knob(self.knob_names)
+        # self.db.restart_db()
         self.init_latency, self.init_throughput, current_state = self.run_workload()
         self.last_latency = self.init_latency
         self.last_throughput = self.init_throughput
@@ -387,7 +372,7 @@ class DDPG_Algorithm():
         epoch_data['init_latency'] = self.init_latency
         epoch_data['init_throughput'] = self.init_throughput
         trial = []
-        for step in range(50):
+        for step in range(30):
             self.logger.write("Current state: " + str(current_state) + "\n")
             action = np.random.random(size=self.action_num)
             self.take_action(action)
@@ -415,25 +400,20 @@ class DDPG_Algorithm():
         self.state_scaler.fit(scaler_training_data)
         for s in random_record:
             self.model.remember(
-                self.state_scaler.transform(
-                    np.array(
-                        s[0]).reshape(
-                        1, -1))[0], s[1], s[2], self.state_scaler.transform(
-                    np.array(
-                        s[3]).reshape(
-                            1, -1))[0])
-        self.logger.write("")
+                self.state_scaler.transform(np.array(s[0]).reshape(1, -1))[0], 
+                s[1], s[2], 
+                self.state_scaler.transform(np.array(s[3]).reshape(1, -1))[0]
+            )
+        self.logger.write("training start!!!")
+
         for epoch in range(total_epoch):
             epoch_data = {}
             self.logger.write("Epoch: " + str(epoch) + "\n")
             epoch_total_reward = 0
-            # self.db.reset_knob(self.knob_names[:self.nonrestart_knob_num])
+            self.db.reset_knob(self.knob_names[:self.nonrestart_knob_num])
             # if self.nonrestart_knob_num<self.action_num:
-            self.db.reset_restart_knob(self.knob_names)
-            self.db.restart_db(
-                remote_config["port"],
-                remote_config["user"],
-                remote_config["password"])
+            # self.db.reset_restart_knob(self.knob_names)
+            # self.db.restart_db()
             current_action = np.random.random(size=self.action_num)
             self.take_action(current_action)
             self.init_latency, self.init_throughput, current_state = self.run_workload()
@@ -443,11 +423,12 @@ class DDPG_Algorithm():
             epoch_data['init_throughput'] = self.init_throughput
             epoch_data['init_action'] = current_action
             trial = []
-            current_state = self.state_scaler.transform(
-                np.array(current_state).reshape(1, -1))[0]
+            current_state = self.state_scaler.transform(np.array(current_state).reshape(1, -1))[0]
+            # model_path="../TuningAlgorithm/model/ddpg/ddpg_tpch_0524/"
+            # self.model.actor_model.load_state_dict(torch.load(model_path+"actor_epoch_7.pkl"))
+            # self.model.critic_model.load_state_dict(torch.load(model_path+"critic_epoch_7.pkl"))
             for step in range(epoch_steps):
-                self.logger.write(
-                    "Current state: " + str(current_state) + "\n")
+                self.logger.write("Current state: " + str(current_state) + "\n")
                 # if np.random.random(1)[0]>self.random_prob:
                 delta_action = self.model.act(current_state, current_action)
                 # else:
@@ -455,8 +436,7 @@ class DDPG_Algorithm():
                 next_action = current_action + delta_action
                 self.take_action(next_action)
                 latency, throughput, new_state = self.run_workload()
-                new_state = self.state_scaler.transform(
-                    np.array(new_state).reshape(1, -1))[0]
+                new_state = self.state_scaler.transform(np.array(new_state).reshape(1, -1))[0]
                 self.logger.write("Latency: " +
                                   str(round(latency, 4)) +
                                   "\nThroughput: " +
@@ -477,7 +457,7 @@ class DDPG_Algorithm():
                     ", Epoch Total Reward: " +
                     str(epoch_total_reward) +
                     "\n")
-                self.model.remember(current_state, action, reward, new_state)
+                self.model.remember(current_state, current_action, reward, new_state) # ??? 
                 self.model.train()
                 current_state = new_state
                 current_action = next_action

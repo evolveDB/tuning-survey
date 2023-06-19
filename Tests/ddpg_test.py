@@ -8,16 +8,12 @@ import pickle
 
 if __name__ == '__main__':
     WORKLOAD = "../Workload/TestWorkload/train_table3_size4M_sample.txt"
-    MODEL_SAVE_FOLDER = "../TuningAlgorithm/model/ddpg/sysbench_ro_mysql_actionstate_allknob/"
+    MODEL_SAVE_FOLDER = "../TuningAlgorithm/model/ddpg/ddpg_h2c_0529/"
     FEATURE_SELECTOR_MODEL = None
-    LOGGER_PATH = "../log/ddpg_sysbench_ro_4M_mysql_allknob_actionstate_restart_1007.log"
+    LOGGER_PATH = "../log/fth2c_0529_ddpg_0529.log"
     TRAIN_EPOCH = 100
     EPOCH_TOTAL_STEPS = 50
     SAVE_EPOCH_INTERVAL = 5
-
-    # f=open(WORKLOAD,'rb')
-    # workload=pickle.load(f)
-    # f.close()
 
     f = open(WORKLOAD, 'r')
     workload_lines = f.readlines()
@@ -32,13 +28,9 @@ if __name__ == '__main__':
         f.close()
 
     logger = Logger(LOGGER_PATH)
-    # db=PostgresExecutor(ip=db_config["host"],port=db_config["port"],user=db_config["user"],password=db_config["password"],database=db_config["dbname"])
-    db = MysqlExecutor(
-        ip=db_config["host"],
-        port=db_config["port"],
-        user=db_config["user"],
-        password=db_config["password"],
-        database=db_config["dbname"])
+    db=MysqlExecutor(ip=db_config["host"],port=db_config["port"],user=db_config["user"],
+                     password=db_config["password"],database=db_config["dbname"],remote_user=remote_config["user"],
+                       remote_port=remote_config["port"], remote_password=remote_config["password"])
     logger.write("Initialize:\n")
     knob_config = non_restart_knob_config.copy()
     knob_names = list(knob_config.keys())
@@ -48,18 +40,14 @@ if __name__ == '__main__':
     knob_names = list(knob_config.keys())
     db.reset_restart_knob(knob_names)
     logger.write("Reset restart:\n")
-    db.restart_db(
-        remote_config["port"],
-        remote_config["user"],
-        remote_config["password"])
+    # db.restart_db()
     logger.write("Restarted:\n")
     knob_info = db.get_knob_min_max(knob_names)
-    knob_names, knob_min, knob_max, knob_granularity, knob_type = modifyKnobConfig(
+    knob_names, knob_min, knob_max, knob_granularity, knob_type, _ = modifyKnobConfig(
         knob_info, knob_config)
     logger.write("Got knob info\n")
-    thread_num = db.get_max_thread_num()
-    logger.write("Start run workload\n")
-    latency, throughput = db.run_job(thread_num, workload)
+    logger.write("Start run tpcc\n")
+    latency, throughput = db.run_tpcc()
     logger.write(
         "Default: latency=" +
         str(latency) +
@@ -79,7 +67,4 @@ if __name__ == '__main__':
         SAVE_EPOCH_INTERVAL,
         MODEL_SAVE_FOLDER)
     db.reset_restart_knob(knob_names)
-    db.restart_db(
-        remote_config["port"],
-        remote_config["user"],
-        remote_config["password"])
+    db.restart_db()

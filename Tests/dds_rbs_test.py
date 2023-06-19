@@ -21,12 +21,14 @@ if __name__ == "__main__":
     # print(sys.getsizeof(workload))
     # f.close()
     # print('workload:', len(workload))
-    logger = open("../log/dds_rbs_order_mysql.log", 'w+')
+    logger = open("../log/default_tpcc_dds_0526.log", 'a+')
     db = MysqlExecutor(ip=db_config["host"], port=db_config["port"], user=db_config["user"],
                        password=db_config["password"], database=db_config["dbname"], remote_user=remote_config["user"],
                        remote_port=remote_config["port"], remote_password=remote_config["password"])
     model = DDS_RBS_Algorithm(NUM_ITERATION, LHS_N, logger)
 
     model.default_latency_throughput(db)
-    model.train(db)
+    result=model.train(db)
+    logger.write("global best: knob "+str(result[0])+ " latency=" + str(result[1])+"\n")
+    logger.flush()
     logger.close()
